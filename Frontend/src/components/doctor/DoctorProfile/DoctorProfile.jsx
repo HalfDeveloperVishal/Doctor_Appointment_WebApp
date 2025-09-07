@@ -1,0 +1,467 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import {
+  MdEmail,
+  MdCall,
+  MdLocationOn,
+  MdAttachMoney,
+  MdStar,
+  MdCameraAlt,
+} from "react-icons/md";
+
+const DoctorProfileView = () => {
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState(null);
+  const [editedProfile, setEditedProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAvailabilityEditing, setIsAvailabilityEditing] = useState(false);
+
+  const durationOptions = [15, 30, 45, 60];
+  const specializations = [
+    "Cardiology",
+    "Dermatology",
+    "Neurology",
+    "Pediatrics",
+    "Orthopedics",
+    "Psychiatry",
+    "Oncology",
+    "Gynecology",
+    "Urology",
+    "Other",
+  ];
+
+  // Fetch profile with token refresh logic
+  useEffect(() => {
+    const fetchProfile = async () => {
+      let token = localStorage.getItem("access_token");
+      const refreshToken = localStorage.getItem("refresh_token");
+
+      if (!token) {
+        if (!refreshToken) {
+          toast.error("No valid session found. Please log in again.");
+          navigate("/login");
+          setIsLoading(false);
+          return;
+        }
+        try {
+          const res = await axios.post(
+            "http://localhost:8000/api/token/refresh/",
+            { refresh: refreshToken }
+          );
+          token = res.data.access;
+          localStorage.setItem("access_token", token);
+          toast.info("Session token refreshed successfully.");
+        } catch {
+          toast.error("Session expired. Please log in again.");
+          navigate("/login");
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      try {
+        const res = await axios.get(
+          "http://localhost:8000/doctor/doctor_profile/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
+        setProfile(res.data);
+        setEditedProfile({ ...res.data, is_accepting_appointments: true });
+      } catch (err) {
+        console.error(err);
+        setError(err.response?.data?.detail || "Failed to load profile.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [navigate]);
+
+  // Handlers
+  const handleEdit = () => setIsEditing(true);
+  const handleCancel = () => {
+    setEditedProfile({ ...profile, is_accepting_appointments: true });
+    setIsEditing(false);
+    setIsAvailabilityEditing(false);
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditedProfile((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDayChange = (day) => {
+    setEditedProfile((prev) => {
+      let working_days = [...(prev.working_days || [])];
+      if (working_days.includes(day))
+        working_days = working_days.filter((d) => d !== day);
+      else working_days.push(day);
+      return { ...prev, working_days };
+    });
+  };
+
+  const preparePayload = (profileData) => {
+    const formatTime = (t) => (t?.length === 5 ? `${t}:00` : t);
+    let duration = profileData.appointment_duration;
+    if (typeof duration === "string") {
+      duration = parseInt(duration);
+    }
+
+    return {
+      ...profileData,
+      years_of_experience: Number(profileData.years_of_experience),
+      consultation_fee: Number(profileData.consultation_fee),
+      appointment_duration: duration,
+      working_days: profileData.working_days || [],
+      start_time: formatTime(profileData.start_time),
+      end_time: formatTime(profileData.end_time),
+    };
+  };
+
+  const handleSave = async (updatedProfile) => {
+  let token = localStorage.getItem("access_token");
+  
+  // If profile_photo is a File, we need FormData
+  const formData = new FormData();
+
+  // Iterate over fields
+  Object.entries(updatedProfile).forEach(([key, value]) => {
+    if (key === "profile_photo" && value instanceof File) {
+      formData.append(key, value);
+    } else if (key === "working_days") {
+      formData.append(key, JSON.stringify(value || [])); // JSON for array
+    } else {
+      formData.append(key, value ?? "");
+    }
+  });
+
+  try {
+    const res = await axios.put(
+      "http://localhost:8000/doctor/doctor_profile/",
+      formData,
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data"
+        },
+        withCredentials: true,
+      }
+    );
+    setProfile(res.data);
+    setEditedProfile({ ...res.data, is_accepting_appointments: true });
+    setIsEditing(false);
+    setIsAvailabilityEditing(false);
+    toast.success("Profile updated successfully.");
+  } catch (err) {
+    console.error(err);
+    toast.error(
+      err.response?.data || "Failed to save profile changes."
+    );
+  }
+};
+
+  // Availability toggle logic
+  const handleToggleAvailability = async () => {
+    if (isAvailabilityEditing) {
+      await handleSave(editedProfile);
+    }
+    setIsAvailabilityEditing(!isAvailabilityEditing);
+    setEditedProfile((prev) => ({
+      ...prev,
+      is_accepting_appointments: !prev.is_accepting_appointments,
+    }));
+  };
+
+  if (isLoading)
+    return <div className="flex items-center justify-center p-6">Loading profile...</div>;
+  if (error)
+    return (
+      <div className="flex items-center justify-center p-6">
+        <div className="max-w-lg bg-white shadow rounded p-6 text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          {error === "Doctor profile not found." && (
+            <Link
+              className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+              to="/doctor-profile-create"
+            >
+              Create Profile
+            </Link>
+          )}
+        </div>
+      </div>
+    );
+
+  return (
+    <div className="min-h-screen p-6 font-sans">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left Column - Overview */}
+        <div className="lg:w-1/3">
+          <div className="sticky top-18 bg-white p-6 rounded-lg shadow space-y-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="relative">
+                <img
+                  src={editedProfile.profile_photo || "https://via.placeholder.com/150"}
+                  alt="Avatar"
+                  className="w-24 h-24 rounded-full mb-2 object-cover"
+                />
+                {isEditing && (
+    <>
+      <button className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+        <MdCameraAlt size={16} />
+      </button>
+      <input
+        type="file"
+        name="profile_photo"
+        accept="image/*"
+        onChange={(e) =>
+          setEditedProfile((prev) => ({
+            ...prev,
+            profile_photo: e.target.files[0],
+          }))
+        }
+        className="absolute -bottom-1 -right-1 w-8 h-8 opacity-0 cursor-pointer"
+      />
+    </>
+  )}
+              </div>
+              <h3 className="text-xl font-semibold">{editedProfile.full_name || "N/A"}</h3>
+              <p className="text-gray-600">{editedProfile.specialization || "N/A"}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <MdStar className="text-yellow-400" />
+                <span className="text-sm font-medium">4.9</span>
+                <span className="text-sm text-gray-500">(247 reviews)</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2"><MdEmail /> {editedProfile.email}</div>
+              <div className="flex items-center gap-2"><MdCall /> {editedProfile.phone_number}</div>
+              <div className="flex items-center gap-2"><MdLocationOn /> {editedProfile.clinic_name}</div>
+              <div className="flex items-center gap-2"><MdAttachMoney /> ${editedProfile.consultation_fee} per consultation</div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 text-center">
+              <div>
+                <p className="text-2xl font-bold">{editedProfile.total_patients || 0}</p>
+                <p className="text-sm text-gray-500">Total Patients</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{editedProfile.years_of_experience || 0}</p>
+                <p className="text-sm text-gray-500">Years Experience</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Details */}
+        <div className="lg:w-2/3 flex flex-col gap-6">
+          {/* Basic Info */}
+          <div className="bg-white p-6 rounded-lg shadow space-y-4">
+            <h2 className="text-lg font-medium">Basic Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { label: "Full Name", name: "full_name", type: "text" },
+                { label: "Email", name: "email", type: "email" },
+                { label: "Phone Number", name: "phone_number", type: "text" },
+                { label: "Clinic Name", name: "clinic_name", type: "text" },
+                { label: "Years of Experience", name: "years_of_experience", type: "number" },
+                { label: "Consultation Fee", name: "consultation_fee", type: "number" },
+              ].map((field) => (
+                <div key={field.name}>
+                  <label className="block text-gray-700 mb-1">{field.label}</label>
+                  <input
+                    type={field.type}
+                    name={field.name}
+                    value={editedProfile[field.name] || ""}
+                    readOnly={!isEditing}
+                    onChange={handleChange}
+                    className="w-full p-2 border border-gray-200 rounded"
+                  />
+                </div>
+              ))}
+
+              <div>
+                <label className="block text-gray-700 mb-1">Specialization</label>
+                <select
+                  name="specialization"
+                  value={editedProfile.specialization || ""}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  className="w-full p-2 border border-gray-200 rounded"
+                >
+                  {specializations.map((spec) => (
+                    <option key={spec} value={spec}>{spec}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 mb-1">Professional Bio</label>
+              <textarea
+                name="bio"
+                value={editedProfile.bio || ""}
+                onChange={handleChange}
+                readOnly={!isEditing}
+                className="w-full p-2 border border-gray-200 rounded min-h-[100px]"
+              />
+            </div>
+            {isEditing && (
+              <button
+                className="text-red-500 hover:text-red-600"
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
+          {/* Availability Settings */}
+          <div className="bg-white p-6 rounded-lg shadow space-y-4">
+            <h2 className="text-lg font-medium">Availability Settings</h2>
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <p>Accepting Appointments</p>
+                <p className="text-sm text-gray-500">Click to edit availability</p>
+              </div>
+              <label className="relative inline-block w-12 h-6 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="opacity-0 w-0 h-0"
+                  checked={editedProfile.is_accepting_appointments}
+                  onChange={handleToggleAvailability}
+                />
+                <span className={`absolute top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full transition-colors
+                before:absolute before:h-4 before:w-4 before:left-1 before:bottom-1 before:bg-white before:rounded-full before:transition-transform
+                ${editedProfile.is_accepting_appointments ? "bg-blue-500 before:translate-x-6" : ""}`}></span>
+              </label>
+            </div>
+
+            <div>
+              <h3 className="font-medium mb-2">Working Days</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day => {
+                  const dayLower = day.toLowerCase();
+                  const isSelected = editedProfile.working_days?.includes(dayLower) || false;
+
+                  return isAvailabilityEditing ? (
+                    <label key={day} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleDayChange(dayLower)}
+                        className="h-4 w-4"
+                      />
+                      {day}
+                    </label>
+                  ) : (
+                    <span 
+                      key={day} 
+                      className={`px-3 py-1 rounded-full text-sm ${
+                        isSelected 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {day}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              {["start_time","end_time"].map((field) => (
+                <div key={field}>
+                  <label className="block text-gray-700 mb-1">
+                    {field.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                  </label>
+                  <input
+                    type="time"
+                    name={field}
+                    value={editedProfile[field] || ""}
+                    onChange={handleChange}
+                    readOnly={!isAvailabilityEditing}
+                    className={`w-full p-2 border border-gray-200 rounded ${
+                      !isAvailabilityEditing ? 'bg-gray-50' : ''
+                    }`}
+                  />
+                </div>
+              ))}
+
+              <div>
+                <label className="block text-gray-700 mb-1">Appointment Duration</label>
+                <select
+                  name="appointment_duration"
+                  value={editedProfile.appointment_duration || ""}
+                  onChange={handleChange}
+                  disabled={!isAvailabilityEditing}
+                  className={`w-full p-2 border border-gray-200 rounded ${
+                    !isAvailabilityEditing ? 'bg-gray-50' : ''
+                  }`}
+                >
+                  {durationOptions.map((opt) => (
+                    <option key={opt} value={opt}>{opt} minutes</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {isAvailabilityEditing && (
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={handleToggleAvailability}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Qualifications */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-lg font-medium mb-2">Qualifications & Certifications</h2>
+            {isEditing ? (
+              <textarea
+                className="w-full p-2 border border-gray-200 rounded min-h-[100px]"
+                value={editedProfile.qualifications || ""}
+                name="qualifications"
+                onChange={handleChange}
+                placeholder="Enter qualifications separated by commas"
+              />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {editedProfile.qualifications
+                  ? editedProfile.qualifications.split(",").map((q, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      >
+                        {q.trim()}
+                      </span>
+                    ))
+                  : <span className="text-gray-500">No qualifications listed.</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DoctorProfileView;
