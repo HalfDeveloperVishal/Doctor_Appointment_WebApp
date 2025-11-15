@@ -8,12 +8,11 @@ const DoctorNavbar = () => {
   const [hasProfile, setHasProfile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isActive = (path) => {
-    return location.pathname === path;
-  };
+  const isActive = (path) => location.pathname === path;
 
   useEffect(() => {
     const checkProfile = async () => {
@@ -21,51 +20,36 @@ const DoctorNavbar = () => {
       const refreshToken = localStorage.getItem("refresh_token");
 
       if (!token) {
-        if (!refreshToken) {
-          toast.error("No valid session found. Please log in again.");
-          navigate("/login");
-          return;
-        }
-
-        try {
-          const res = await axios.post("http://localhost:8000/api/token/refresh/", {
-            refresh: refreshToken,
-          });
-          token = res.data.access;
-          localStorage.setItem("access_token", token);
-          toast.info("Session token refreshed successfully.");
-        } catch (err) {
-          console.error("Token refresh failed:", err);
-          toast.error("Session expired. Please log in again.");
-          navigate("/login");
-          return;
-        }
+        setIsAuthenticated(false);
+        return;
       }
 
       try {
-        const res = await axios.get("http://localhost:8000/doctor/doctor_profile_check/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          withCredentials: true,
-        });
+        const res = await axios.get(
+          "http://localhost:8000/doctor/doctor_profile_check/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
         setHasProfile(res.data.has_profile);
+        setIsAuthenticated(true);
       } catch (error) {
         console.error("Error checking profile:", error.response?.data || error);
-        toast.error("Failed to check profile status. Please try again.");
+        setIsAuthenticated(false);
       }
 
       try {
-        const profileRes = await axios.get("http://localhost:8000/doctor/doctor_profile/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          withCredentials: true,
-        });
+        const profileRes = await axios.get(
+          "http://localhost:8000/doctor/doctor_profile/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
         setProfile(profileRes.data);
       } catch (error) {
         console.error("Error fetching profile:", error.response?.data || error);
-        toast.error("Failed to load profile data.");
       }
     };
 
@@ -76,6 +60,7 @@ const DoctorNavbar = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     toast.success("Logged out successfully.");
+    setIsAuthenticated(false);
     navigate("/login");
   };
 
@@ -83,11 +68,12 @@ const DoctorNavbar = () => {
     { name: "Home", path: "/doctor-dashboard" },
     { name: "Register Yourself", path: "/doctor-profile-create", show: !hasProfile },
     { name: "Profile", path: "/doctor-profile" },
+    { name: "Appointments", path: "/appointment-info" },
   ];
 
   return (
     <>
-      {/* Sidebar */}
+      {/* Sidebar (mobile) */}
       <div
         className={`bg-white shadow-lg w-64 fixed top-0 left-0 h-screen transition-transform duration-300 z-50 md:hidden ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -97,43 +83,36 @@ const DoctorNavbar = () => {
           onClick={() => setIsSidebarOpen(false)}
           className="absolute top-4 right-4 text-gray-600 hover:text-blue-600"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          ✖
         </button>
 
         <div className="p-6">
-          <h1 className="text-xl font-semibold text-gray-800">HealthCare</h1>
+          <h1 className="text-xl font-semibold text-gray-800">MedConnect</h1>
           <h2 className="text-lg text-gray-600 mt-1">Doctor Portal</h2>
         </div>
 
         <nav className="mt-8">
-          <h3 className="px-6 py-2 text-gray-500 uppercase text-sm font-semibold">Main Menu</h3>
+          <h3 className="px-6 py-2 text-gray-500 uppercase text-sm font-semibold">
+            Main Menu
+          </h3>
           <ul className="px-2">
-            {sidebarItems.map((item) =>
-              item.show !== false && (
-                <li key={item.name} className="mb-1">
-                  <Link
-                    to={item.path}
-                    className={`flex items-center px-4 py-3 rounded-lg ${
-                      isActive(item.path) ? "bg-blue-100 text-blue-600" : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full mr-3 ${
-                        isActive(item.path) ? "bg-blue-600" : "bg-transparent"
+            {sidebarItems.map(
+              (item) =>
+                item.show !== false && (
+                  <li key={item.name} className="mb-1">
+                    <Link
+                      to={item.path}
+                      className={`flex items-center px-4 py-3 rounded-lg ${
+                        isActive(item.path)
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-700 hover:bg-gray-100"
                       }`}
-                    ></span>
-                    {item.name}
-                  </Link>
-                </li>
-              )
+                      onClick={() => setIsSidebarOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                )
             )}
           </ul>
         </nav>
@@ -145,56 +124,103 @@ const DoctorNavbar = () => {
             </div>
             <div className="ml-3">
               <p className="font-medium">{profile?.full_name || "N/A"}</p>
-              <p className="text-sm text-gray-500">{profile?.specialization || "N/A"}</p>
+              <p className="text-sm text-gray-500">
+                {profile?.specialization || "N/A"}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Top Navbar */}
       <nav className="bg-white shadow-md px-6 py-4 flex justify-between items-center fixed top-0 left-0 right-0 z-30">
+        {/* Left Section - Brand */}
         <div className="flex items-center">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="text-gray-600 hover:text-blue-600 md:hidden mr-4"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
+            ☰
           </button>
-          <h1 className="text-xl font-semibold text-blue-600">MedConnect</h1>
+          <div className="gap-2 flex justify-between items-center">
+            <div className="bg-blue-600 text-white font-bold text-xl rounded-xl px-2 py-1">
+              H+
+            </div>
+            <h1 className="text-xl font-semibold text-gray-800">MedConnect</h1>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {!hasProfile && (
-            <Link
-              to="/doctor-profile-create"
-              className="text-gray-600 hover:text-blue-600"
-            >
-              Register Yourself
-            </Link>
+        {/* Center Section - Links */}
+        <div className="hidden md:flex items-center gap-6">
+          {isAuthenticated && (
+            <>
+              {!hasProfile && (
+                <Link
+                  to="/doctor-profile-create"
+                  className={`text-gray-600 hover:text-blue-600 ${
+                    isActive("/doctor-profile-create") ? "font-semibold text-blue-600" : ""
+                  }`}
+                >
+                  Register Yourself
+                </Link>
+              )}
+              <Link
+                to="/doctor-dashboard"
+                className={`text-gray-600 hover:text-blue-600 ${
+                  isActive("/doctor-dashboard") ? "font-semibold text-blue-600" : ""
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/doctor-profile"
+                className={`text-gray-600 hover:text-blue-600 ${
+                  isActive("/doctor-profile") ? "font-semibold text-blue-600" : ""
+                }`}
+              >
+                Profile
+              </Link>
+              <Link
+                to="/appointment-info"
+                className={`text-gray-600 hover:text-blue-600 ${
+                  isActive("/appointment-info") ? "font-semibold text-blue-600" : ""
+                }`}
+              >
+                Appointments
+              </Link>
+              
+            </>
           )}
-          <Link to="/doctor-profile" className="text-gray-600 hover:text-blue-600">
-            Profile
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
+        </div>
+
+        {/* Right Section - Auth Buttons */}
+        <div className="flex items-center gap-4">
+          {!isAuthenticated ? (
+            <>
+              <Link
+                to="/signup?role=doctor"
+                className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Sign Up
+              </Link>
+              <Link
+                to="/login"
+                className="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-100"
+              >
+                Login
+              </Link>
+            </>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </nav>
 
-      {/* Main Content Area */}
-      <main className="flex-1 pt-14  bg-gray-50">
-        {/* Content will be rendered here by Layout */}
-      </main>
+      <main className="flex-1 pt-14 bg-gray-50"></main>
     </>
   );
 };

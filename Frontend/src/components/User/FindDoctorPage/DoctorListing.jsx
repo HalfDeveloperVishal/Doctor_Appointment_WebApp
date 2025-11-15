@@ -1,9 +1,8 @@
-// DoctorPage.jsx
 import React, { useState, useEffect } from "react";
 import { MapPin, Star } from "lucide-react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-// Debounce utility
 const debounce = (func, delay) => {
   let timer;
   return (...args) => {
@@ -17,8 +16,11 @@ const DoctorPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [specialties, setSpecialties] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [error, setError] = useState("");
 
-  // Fetch specialties
+  const navigate = useNavigate();
+
+  // Fetch specialties (static for now)
   useEffect(() => {
     setSpecialties([
       "All Specialties",
@@ -29,41 +31,64 @@ const DoctorPage = () => {
     ]);
   }, []);
 
-  // Fetch doctors
+  // Fetch doctors from backend (no auth required)
   const fetchDoctors = async (search = searchQuery, spec = specialty) => {
     try {
-      let url = "http://localhost:8000/doctor/doctor_listing/";
+      let url = "http://localhost:8000/patient/doctor_listing/";
       const params = [];
       if (spec && spec !== "All Specialties") {
         params.push(`specialization=${spec.toLowerCase()}`);
       }
       if (search.trim() !== "") {
-        params.push(`search=${encodeURIComponent(search.trim().toLowerCase())}`); // convert to lowercase
+        params.push(`search=${encodeURIComponent(search.trim().toLowerCase())}`);
       }
       if (params.length > 0) url += `?${params.join("&")}`;
+
       const res = await axios.get(url);
       setDoctors(res.data);
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching doctors:", err);
+      setError("Failed to load doctors. Please try again later.");
     }
   };
 
   const debouncedFetch = debounce(fetchDoctors, 300);
-
   useEffect(() => {
     debouncedFetch(searchQuery, specialty);
   }, [searchQuery, specialty]);
 
+  // Handle "Book Now" click
+  const handleBookNow = (doctorId) => {
+    const token = localStorage.getItem("access_token");
+
+    if (!token) {
+      setError("❌ Please log in to book an appointment.");
+      // Hide error after 4 seconds
+      setTimeout(() => setError(""), 4000);
+      return; // Stay on the page
+    }
+
+    // Navigate to booking page if authenticated
+    navigate(`/doctor/${doctorId}/slots`);
+  };
+
   return (
     <div className="min-h-screen px-6" style={{ backgroundColor: "#F9FAFB" }}>
-      {/* Filter & Search Bar */}
+      {/* Error Alert */}
+      {error && (
+        <div className="max-w-3xl mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
+          {error}
+        </div>
+      )}
+
+      {/* Search & Filter */}
       <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-md p-6 flex flex-col md:flex-row gap-3 mb-8">
         <input
           type="text"
           placeholder="Search doctors or clinics..."
           className="outline-none flex-1 border border-gray-300 rounded-xl px-3 py-2 text-gray-700 focus:outline-none focus:border-blue-500"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value.toLowerCase())} // convert input to lowercase
+          onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
         />
 
         <select
@@ -94,19 +119,25 @@ const DoctorPage = () => {
                   className="w-14 h-14 rounded-full object-cover"
                 />
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">{doctor.full_name}</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {doctor.full_name}
+                  </h2>
                   <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full mt-1 inline-block">
                     {doctor.specialization_display}
                   </span>
                 </div>
               </div>
 
-              <p className="text-gray-600 text-sm mt-2">{doctor.years_of_experience} years experience</p>
+              <p className="text-gray-600 text-sm mt-2">
+                {doctor.years_of_experience} years experience
+              </p>
 
               <div className="flex items-center text-sm text-gray-600 mt-2">
                 <Star className="w-4 h-4 text-yellow-500 mr-1" />
                 <span className="font-medium">{doctor.rating || "4.8"}</span>
-                <span className="ml-1">({doctor.reviews_count || "200"} reviews)</span>
+                <span className="ml-1">
+                  ({doctor.reviews_count || "200"} reviews)
+                </span>
               </div>
 
               <div className="flex items-center text-sm text-gray-600 mt-2">
@@ -118,7 +149,10 @@ const DoctorPage = () => {
                 <button className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition">
                   View Profile
                 </button>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+                <button
+                  onClick={() => handleBookNow(doctor.id)}
+                  className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+                >
                   Book Now
                 </button>
               </div>

@@ -9,7 +9,6 @@ SPECIALIZATION_CHOICES = [
     ('dermatology', 'Dermatology'),
     ('neurology', 'Neurology'),
     ('orthopedics', 'Orthopedics'),
-    # Add more as needed
 ]
 
 DAYS_OF_WEEK = [
@@ -32,7 +31,7 @@ class DoctorProfile(models.Model):
     qualifications = models.TextField()
     clinic_name = models.CharField(max_length=100)
     address = models.TextField()
-    working_days = models.JSONField()  # Store list like ["monday", "wednesday"]
+    working_days = models.JSONField() 
     start_time = models.TimeField()
     end_time = models.TimeField()
     appointment_duration = models.PositiveIntegerField(help_text="Duration in minutes")
@@ -45,6 +44,6 @@ class DoctorProfile(models.Model):
     @property
     def profile_picture_url(self):
         """Return full URL for profile picture."""
-        if self.profile_picture:
-            return f"{settings.MEDIA_URL}{self.profile_picture}"
+        if self.profile_photo:
+            return f"{settings.MEDIA_URL}{self.profile_photo}"
         return None

@@ -20,19 +20,15 @@ const DoctorProfileView = () => {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAvailabilityEditing, setIsAvailabilityEditing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const durationOptions = [15, 30, 45, 60];
+
   const specializations = [
-    "Cardiology",
-    "Dermatology",
-    "Neurology",
-    "Pediatrics",
-    "Orthopedics",
-    "Psychiatry",
-    "Oncology",
-    "Gynecology",
-    "Urology",
-    "Other",
+    { value: "cardiology", label: "Cardiology" },
+    { value: "dermatology", label: "Dermatology" },
+    { value: "neurology", label: "Neurology" },
+    { value: "orthopedics", label: "Orthopedics" },
   ];
 
   // Fetch profile with token refresh logic
@@ -91,6 +87,7 @@ const DoctorProfileView = () => {
     setEditedProfile({ ...profile, is_accepting_appointments: true });
     setIsEditing(false);
     setIsAvailabilityEditing(false);
+    setSelectedFile(null);
   };
 
   const handleChange = (e) => {
@@ -108,80 +105,102 @@ const DoctorProfileView = () => {
     });
   };
 
-  const preparePayload = (profileData) => {
-    const formatTime = (t) => (t?.length === 5 ? `${t}:00` : t);
-    let duration = profileData.appointment_duration;
-    if (typeof duration === "string") {
-      duration = parseInt(duration);
-    }
+  const handleSaveProfile = async () => {
+    let token = localStorage.getItem("access_token");
 
-    return {
-      ...profileData,
-      years_of_experience: Number(profileData.years_of_experience),
-      consultation_fee: Number(profileData.consultation_fee),
-      appointment_duration: duration,
-      working_days: profileData.working_days || [],
-      start_time: formatTime(profileData.start_time),
-      end_time: formatTime(profileData.end_time),
+    const formatTime = (t) => (t?.length === 5 ? `${t}:00` : t);
+    const payload = {
+      ...editedProfile,
+      years_of_experience: Number(editedProfile.years_of_experience),
+      consultation_fee: Number(editedProfile.consultation_fee),
+      appointment_duration: Number(editedProfile.appointment_duration),
+      working_days: editedProfile.working_days || [],
+      start_time: formatTime(editedProfile.start_time),
+      end_time: formatTime(editedProfile.end_time),
     };
+
+    // Remove the profile photo from the payload
+    delete payload.profile_photo;
+
+    try {
+      const response = await axios.put(
+        "http://localhost:8000/doctor/doctor_profile/",
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+      setProfile(response.data);
+      setEditedProfile({ ...response.data, is_accepting_appointments: true });
+      setIsEditing(false);
+      setIsAvailabilityEditing(false);
+      toast.success("Profile updated successfully.");
+    } catch (err) {
+      console.error("Save error:", err.response?.data || err.message);
+      const errorMessage =
+        err.response?.data?.detail ||
+        (typeof err.response?.data === "object"
+          ? Object.values(err.response.data).flat().join(", ")
+          : "Failed to save profile changes.");
+      toast.error(errorMessage);
+    }
   };
 
-  const handleSave = async (updatedProfile) => {
-  let token = localStorage.getItem("access_token");
-  
-  // If profile_photo is a File, we need FormData
-  const formData = new FormData();
-
-  // Iterate over fields
-  Object.entries(updatedProfile).forEach(([key, value]) => {
-    if (key === "profile_photo" && value instanceof File) {
-      formData.append(key, value);
-    } else if (key === "working_days") {
-      formData.append(key, JSON.stringify(value || [])); // JSON for array
-    } else {
-      formData.append(key, value ?? "");
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      await handleSavePhoto(file);
     }
-  });
+  };
 
-  try {
-    const res = await axios.put(
-      "http://localhost:8000/doctor/doctor_profile/",
-      formData,
-      {
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data"
-        },
-        withCredentials: true,
-      }
-    );
-    setProfile(res.data);
-    setEditedProfile({ ...res.data, is_accepting_appointments: true });
-    setIsEditing(false);
-    setIsAvailabilityEditing(false);
-    toast.success("Profile updated successfully.");
-  } catch (err) {
-    console.error(err);
-    toast.error(
-      err.response?.data || "Failed to save profile changes."
-    );
-  }
-};
+  const handleSavePhoto = async (file) => {
+    let token = localStorage.getItem("access_token");
+    const formData = new FormData();
+    formData.append("profile_photo", file);
+
+    try {
+      const response = await axios.put(
+        "http://localhost:8000/doctor/doctor_profile/",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+          withCredentials: true,
+        }
+      );
+      setProfile(response.data);
+      setEditedProfile({ ...response.data, is_accepting_appointments: true });
+      setSelectedFile(null);
+      toast.success("Profile photo updated successfully.");
+    } catch (err) {
+      console.error("Photo save error:", err.response?.data || err.message);
+      toast.error("Failed to update profile photo.");
+    }
+  };
 
   // Availability toggle logic
   const handleToggleAvailability = async () => {
     if (isAvailabilityEditing) {
-      await handleSave(editedProfile);
+      await handleSaveProfile(); // Save updated profile when exiting edit mode
+      setIsAvailabilityEditing(false);
+    } else {
+      setIsAvailabilityEditing(true);
     }
-    setIsAvailabilityEditing(!isAvailabilityEditing);
-    setEditedProfile((prev) => ({
-      ...prev,
-      is_accepting_appointments: !prev.is_accepting_appointments,
-    }));
   };
 
   if (isLoading)
-    return <div className="flex items-center justify-center p-6">Loading profile...</div>;
+    return (
+      <div className="flex items-center justify-center p-6">
+        Loading profile...
+      </div>
+    );
   if (error)
     return (
       <div className="flex items-center justify-center p-6">
@@ -209,32 +228,39 @@ const DoctorProfileView = () => {
             <div className="flex flex-col items-center text-center">
               <div className="relative">
                 <img
-                  src={editedProfile.profile_photo || "https://via.placeholder.com/150"}
+                  src={
+                    selectedFile
+                      ? URL.createObjectURL(selectedFile)
+                      : editedProfile.profile_photo ||
+                        "https://via.placeholder.com/150"
+                  }
                   alt="Avatar"
                   className="w-24 h-24 rounded-full mb-2 object-cover"
                 />
                 {isEditing && (
-    <>
-      <button className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-        <MdCameraAlt size={16} />
-      </button>
-      <input
-        type="file"
-        name="profile_photo"
-        accept="image/*"
-        onChange={(e) =>
-          setEditedProfile((prev) => ({
-            ...prev,
-            profile_photo: e.target.files[0],
-          }))
-        }
-        className="absolute -bottom-1 -right-1 w-8 h-8 opacity-0 cursor-pointer"
-      />
-    </>
-  )}
+                  <>
+                    <label className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white cursor-pointer hover:bg-blue-600">
+                      <MdCameraAlt size={16} />
+                      <input
+                        type="file"
+                        name="profile_photo"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                    </label>
+                  </>
+                )}
               </div>
-              <h3 className="text-xl font-semibold">{editedProfile.full_name || "N/A"}</h3>
-              <p className="text-gray-600">{editedProfile.specialization || "N/A"}</p>
+              <h3 className="text-xl font-semibold">
+                {editedProfile.full_name || "N/A"}
+              </h3>
+              <p className="text-gray-600">
+                {editedProfile.specialization_display ||
+                  editedProfile.specialization?.charAt(0).toUpperCase() +
+                    editedProfile.specialization?.slice(1) ||
+                  "N/A"}
+              </p>
               <div className="flex items-center gap-1 mt-1">
                 <MdStar className="text-yellow-400" />
                 <span className="text-sm font-medium">4.9</span>
@@ -242,18 +268,31 @@ const DoctorProfileView = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center gap-2"><MdEmail /> {editedProfile.email}</div>
-              <div className="flex items-center gap-2"><MdCall /> {editedProfile.phone_number}</div>
-              <div className="flex items-center gap-2"><MdLocationOn /> {editedProfile.clinic_name}</div>
-              <div className="flex items-center gap-2"><MdAttachMoney /> ${editedProfile.consultation_fee} per consultation</div>
+              <div className="flex items-center gap-2">
+                <MdEmail /> {editedProfile.email}
+              </div>
+              <div className="flex items-center gap-2">
+                <MdCall /> {editedProfile.phone_number}
+              </div>
+              <div className="flex items-center gap-2">
+                <MdLocationOn /> {editedProfile.clinic_name}
+              </div>
+              <div className="flex items-center gap-2">
+                <MdAttachMoney /> ${editedProfile.consultation_fee} per
+                consultation
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 text-center">
               <div>
-                <p className="text-2xl font-bold">{editedProfile.total_patients || 0}</p>
+                <p className="text-2xl font-bold">
+                  {editedProfile.total_patients || 0}
+                </p>
                 <p className="text-sm text-gray-500">Total Patients</p>
               </div>
               <div>
-                <p className="text-2xl font-bold">{editedProfile.years_of_experience || 0}</p>
+                <p className="text-2xl font-bold">
+                  {editedProfile.years_of_experience || 0}
+                </p>
                 <p className="text-sm text-gray-500">Years Experience</p>
               </div>
             </div>
@@ -264,62 +303,119 @@ const DoctorProfileView = () => {
         <div className="lg:w-2/3 flex flex-col gap-6">
           {/* Basic Info */}
           <div className="bg-white p-6 rounded-lg shadow space-y-4">
-            <h2 className="text-lg font-medium">Basic Information</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-medium">Basic Information</h2>
+              {!isEditing && (
+                <button
+                  onClick={handleEdit}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Edit Profile
+                </button>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { label: "Full Name", name: "full_name", type: "text" },
-                { label: "Email", name: "email", type: "email" },
-                { label: "Phone Number", name: "phone_number", type: "text" },
+                {
+                  label: "Full Name",
+                  name: "full_name",
+                  type: "text",
+                  readonly: false,
+                },
+                {
+                  label: "Email",
+                  name: "email",
+                  type: "email",
+                  readonly: true,
+                },
+                {
+                  label: "Phone Number",
+                  name: "phone_number",
+                  type: "text",
+                  readonly: true,
+                },
                 { label: "Clinic Name", name: "clinic_name", type: "text" },
-                { label: "Years of Experience", name: "years_of_experience", type: "number" },
-                { label: "Consultation Fee", name: "consultation_fee", type: "number" },
+                {
+                  label: "Years of Experience",
+                  name: "years_of_experience",
+                  type: "number",
+                },
+                {
+                  label: "Consultation Fee",
+                  name: "consultation_fee",
+                  type: "number",
+                },
               ].map((field) => (
                 <div key={field.name}>
-                  <label className="block text-gray-700 mb-1">{field.label}</label>
+                  <label className="block text-gray-700 mb-1">
+                    {field.label}
+                  </label>
                   <input
                     type={field.type}
                     name={field.name}
                     value={editedProfile[field.name] || ""}
-                    readOnly={!isEditing}
+                    readOnly={!isEditing || field.readonly}
                     onChange={handleChange}
-                    className="w-full p-2 border border-gray-200 rounded"
+                    className={`w-full p-2 border border-gray-200 rounded ${
+                      !isEditing || field.readonly ? "bg-gray-50" : ""
+                    }`}
                   />
                 </div>
               ))}
 
               <div>
-                <label className="block text-gray-700 mb-1">Specialization</label>
+                <label className="block text-gray-700 mb-1">
+                  Specialization
+                </label>
                 <select
                   name="specialization"
                   value={editedProfile.specialization || ""}
                   onChange={handleChange}
                   disabled={!isEditing}
-                  className="w-full p-2 border border-gray-200 rounded"
+                  className={`w-full p-2 border border-gray-200 rounded ${
+                    !isEditing ? "bg-gray-50" : ""
+                  }`}
                 >
                   {specializations.map((spec) => (
-                    <option key={spec} value={spec}>{spec}</option>
+                    <option key={spec.value} value={spec.value}>
+                      {spec.label}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-1">Professional Bio</label>
+              <label className="block text-gray-700 mb-1">
+                Professional Bio
+              </label>
               <textarea
                 name="bio"
                 value={editedProfile.bio || ""}
                 onChange={handleChange}
                 readOnly={!isEditing}
-                className="w-full p-2 border border-gray-200 rounded min-h-[100px]"
+                className={`w-full p-2 border border-gray-200 rounded min-h-[100px] ${
+                  !isEditing ? "bg-gray-50" : ""
+                }`}
               />
             </div>
+
             {isEditing && (
-              <button
-                className="text-red-500 hover:text-red-600"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={handleSaveProfile}
+                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Save Changes
+                </button>
+                <button
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+              </div>
             )}
           </div>
 
@@ -329,7 +425,9 @@ const DoctorProfileView = () => {
             <div className="flex justify-between items-center mb-4">
               <div>
                 <p>Accepting Appointments</p>
-                <p className="text-sm text-gray-500">Click to edit availability</p>
+                <p className="text-sm text-gray-500">
+                  Click to edit availability
+                </p>
               </div>
               <label className="relative inline-block w-12 h-6 cursor-pointer">
                 <input
@@ -338,18 +436,33 @@ const DoctorProfileView = () => {
                   checked={editedProfile.is_accepting_appointments}
                   onChange={handleToggleAvailability}
                 />
-                <span className={`absolute top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full transition-colors
+                <span
+                  className={`absolute top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full transition-colors
                 before:absolute before:h-4 before:w-4 before:left-1 before:bottom-1 before:bg-white before:rounded-full before:transition-transform
-                ${editedProfile.is_accepting_appointments ? "bg-blue-500 before:translate-x-6" : ""}`}></span>
+                ${
+                  editedProfile.is_accepting_appointments
+                    ? "bg-blue-500 before:translate-x-6"
+                    : ""
+                }`}
+                ></span>
               </label>
             </div>
 
             <div>
               <h3 className="font-medium mb-2">Working Days</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day => {
+                {[
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
+                ].map((day) => {
                   const dayLower = day.toLowerCase();
-                  const isSelected = editedProfile.working_days?.includes(dayLower) || false;
+                  const isSelected =
+                    editedProfile.working_days?.includes(dayLower) || false;
 
                   return isAvailabilityEditing ? (
                     <label key={day} className="flex items-center gap-2">
@@ -362,12 +475,12 @@ const DoctorProfileView = () => {
                       {day}
                     </label>
                   ) : (
-                    <span 
-                      key={day} 
+                    <span
+                      key={day}
                       className={`px-3 py-1 rounded-full text-sm ${
-                        isSelected 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-500'
+                        isSelected
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-500"
                       }`}
                     >
                       {day}
@@ -378,10 +491,12 @@ const DoctorProfileView = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              {["start_time","end_time"].map((field) => (
+              {["start_time", "end_time"].map((field) => (
                 <div key={field}>
                   <label className="block text-gray-700 mb-1">
-                    {field.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                    {field
+                      .replace("_", " ")
+                      .replace(/\b\w/g, (l) => l.toUpperCase())}
                   </label>
                   <input
                     type="time"
@@ -390,25 +505,29 @@ const DoctorProfileView = () => {
                     onChange={handleChange}
                     readOnly={!isAvailabilityEditing}
                     className={`w-full p-2 border border-gray-200 rounded ${
-                      !isAvailabilityEditing ? 'bg-gray-50' : ''
+                      !isAvailabilityEditing ? "bg-gray-50" : ""
                     }`}
                   />
                 </div>
               ))}
 
               <div>
-                <label className="block text-gray-700 mb-1">Appointment Duration</label>
+                <label className="block text-gray-700 mb-1">
+                  Appointment Duration
+                </label>
                 <select
                   name="appointment_duration"
                   value={editedProfile.appointment_duration || ""}
                   onChange={handleChange}
                   disabled={!isAvailabilityEditing}
                   className={`w-full p-2 border border-gray-200 rounded ${
-                    !isAvailabilityEditing ? 'bg-gray-50' : ''
+                    !isAvailabilityEditing ? "bg-gray-50" : ""
                   }`}
                 >
                   {durationOptions.map((opt) => (
-                    <option key={opt} value={opt}>{opt} minutes</option>
+                    <option key={opt} value={opt}>
+                      {opt} minutes
+                    </option>
                   ))}
                 </select>
               </div>
@@ -434,7 +553,9 @@ const DoctorProfileView = () => {
 
           {/* Qualifications */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-lg font-medium mb-2">Qualifications & Certifications</h2>
+            <h2 className="text-lg font-medium mb-2">
+              Qualifications & Certifications
+            </h2>
             {isEditing ? (
               <textarea
                 className="w-full p-2 border border-gray-200 rounded min-h-[100px]"
@@ -445,8 +566,10 @@ const DoctorProfileView = () => {
               />
             ) : (
               <div className="flex flex-wrap gap-2">
-                {editedProfile.qualifications
-                  ? editedProfile.qualifications.split(",").map((q, idx) => (
+                {editedProfile.qualifications ? (
+                  editedProfile.qualifications
+                    .split(",")
+                    .map((q, idx) => (
                       <span
                         key={idx}
                         className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
@@ -454,7 +577,11 @@ const DoctorProfileView = () => {
                         {q.trim()}
                       </span>
                     ))
-                  : <span className="text-gray-500">No qualifications listed.</span>}
+                ) : (
+                  <span className="text-gray-500">
+                    No qualifications listed.
+                  </span>
+                )}
               </div>
             )}
           </div>

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'accounts',
     'doctor',
+    'patient',
     'corsheaders',
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
@@ -162,3 +163,5 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+GOOGLE_CLIENT_ID = "857243521134-8c07pnjubg8hrf4uhd0mfu25ldcnlnjk.apps.googleusercontent.com"
