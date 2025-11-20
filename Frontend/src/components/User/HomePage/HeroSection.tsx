@@ -1,6 +1,6 @@
 import React from 'react';
 
-const HeroSection = () => {
+const HeroSection: React.FC = () => {
   return (
     <div className="bg-gradient-to-br from-[var(--color-background)] via-teal-50 to-blue-50 py-36 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Decorative background elements */}

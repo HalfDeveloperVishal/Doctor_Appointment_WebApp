@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 
-const SignUpForm = () => {
+const SignUpForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,7 +21,7 @@ const SignUpForm = () => {
     agreeMarketing: false,
   });
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -29,7 +29,7 @@ const SignUpForm = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.agreeTerms) {
@@ -48,7 +48,7 @@ const SignUpForm = () => {
 
       toast.success(res.data.message || "Account created successfully!");
       navigate(`/login?role=${formData.role}`);
-    } catch (err) {
+    } catch (err: any) {
       const backend = err.response?.data;
 
       let errorMsg =
@@ -67,7 +67,7 @@ const SignUpForm = () => {
     }
   };
 
-  const handleGoogleSignUp = async (credentialResponse) => {
+  const handleGoogleSignUp = async (credentialResponse: any) => {
     try {
       const res = await axios.post(
         "http://localhost:8000/accounts/google-signup/",
@@ -81,7 +81,7 @@ const SignUpForm = () => {
         toast.success("Account created successfully with Google!");
         navigate(`/login?role=${formData.role}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       const backend = err.response?.data;
 
       let errorMsg =

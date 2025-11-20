@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import "react-toastify/dist/ReactToastify.css";
 
-const LoginForm = () => {
+const LoginForm: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
@@ -17,11 +17,11 @@ const LoginForm = () => {
   const params = new URLSearchParams(location.search);
   const roleParam = params.get("role");
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleLoginSuccess = async (loginData) => {
+  const handleLoginSuccess = async (loginData: any) => {
     localStorage.setItem("access_token", loginData.access);
     localStorage.setItem("refresh_token", loginData.refresh);
 
@@ -56,7 +56,7 @@ const LoginForm = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
@@ -70,7 +70,7 @@ const LoginForm = () => {
       );
 
       await handleLoginSuccess(res.data);
-    } catch (err) {
+    } catch (err: any) {
       const errorMsg =
         err.response?.data?.message ||
         err.response?.data?.error ||
@@ -81,7 +81,7 @@ const LoginForm = () => {
     }
   };
 
-  const handleGoogleLogin = async (credentialResponse) => {
+  const handleGoogleLogin = async (credentialResponse: any) => {
     setIsLoading(true);
     try {
       const res = await axios.post(

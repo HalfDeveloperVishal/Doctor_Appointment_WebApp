@@ -19,7 +19,7 @@ function App() {
   return (
     <div>
       {/* ✅ Toastify Must Be At The Top Level */}
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         pauseOnHover
