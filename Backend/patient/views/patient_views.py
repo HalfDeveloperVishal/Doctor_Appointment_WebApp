@@ -40,37 +40,35 @@ class DoctorListView(generics.ListAPIView):
 
         return queryset
 
+# patient/views.py
+# patient/views.py
 class BookSlotView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, doctor_id):
-        # Get doctor
+        # 1️⃣ Get doctor
         try:
             doctor = DoctorProfile.objects.get(id=doctor_id)
         except DoctorProfile.DoesNotExist:
             return Response({"error": "Doctor not found"}, status=404)
 
-        # Booking fields
+        # 2️⃣ Booking & Patient info
         date_str = request.data.get('date')
         start_time_str = request.data.get('start_time')
         end_time_str = request.data.get('end_time')
-
-        # Patient info fields
         full_name = request.data.get('full_name')
         email = request.data.get('email')
         phone_number = request.data.get('phone_number')
         date_of_birth = request.data.get('date_of_birth')
         reason_to_visit = request.data.get('reason_to_visit', '')
         symptoms_or_concerns = request.data.get('symptoms_or_concerns', '')
+        payment_method = request.data.get('payment_method', 'counter')
 
-        if not date_str or not start_time_str or not end_time_str:
-            return Response({"error": "date, start_time, and end_time are required"}, status=400)
+        # 3️⃣ Validate fields
+        if not all([date_str, start_time_str, end_time_str, full_name, phone_number, date_of_birth]):
+            return Response({"error": "Missing required fields"}, status=400)
 
-        if not full_name or not phone_number or not date_of_birth:
-            return Response({"error": "full_name, phone_number, and date_of_birth are required"}, status=400)
-
-        # Parse date and time
         try:
             date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
             start_time_obj = datetime.strptime(start_time_str, "%I:%M %p").time()
@@ -79,28 +77,24 @@ class BookSlotView(APIView):
         except ValueError:
             return Response({"error": "Invalid date/time format"}, status=400)
 
-        # Check if patient already has a booking with this doctor on this date
+        # 4️⃣ Check slot availability
         if Booking.objects.filter(doctor=doctor, patient=request.user, date=date_obj).exists():
-            return Response(
-                {"error": "You already have an appointment with this doctor on this date"},
-                status=400
-            )
-
-        # Check if slot is already booked
+            return Response({"error": "You already have an appointment with this doctor on this date"}, status=400)
         if Booking.objects.filter(doctor=doctor, date=date_obj, start_time=start_time_obj).exists():
             return Response({"error": "This slot is already booked"}, status=400)
 
-        # Create booking
+        # 5️⃣ Create booking
         booking = Booking.objects.create(
             doctor=doctor,
             patient=request.user,
             date=date_obj,
             start_time=start_time_obj,
-            end_time=end_time_obj
+            end_time=end_time_obj,
+            payment_method=payment_method,
+            payment_status="success" if payment_method == "counter" else "pending"
         )
 
-        # Create patient info
-        patient_info = PatientBookingInfo.objects.create(
+        PatientBookingInfo.objects.create(
             booking=booking,
             full_name=full_name,
             email=email,
@@ -110,12 +104,10 @@ class BookSlotView(APIView):
             symptoms_or_concerns=symptoms_or_concerns
         )
 
-        booking_serializer = BookingSerializer(booking)
-        patient_info_serializer = PatientBookingInfoSerializer(patient_info)
-
+        # ✅ Return booking_id for both counter and online payments
         return Response({
-            "booking": booking_serializer.data,
-            "patient_info": patient_info_serializer.data
+            "id": booking.id,  # ✅ Added this
+            "message": f"Appointment booked successfully for {start_time_str} - {end_time_str}"
         }, status=201)
 
 

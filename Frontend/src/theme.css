@@ -1,0 +1,22 @@
+@theme {
+  --color-primary: #0D9488; /* Teal 600 */
+  --color-primary-hover: #0F766E; /* Teal 700 */
+  --color-secondary: #3B82F6; /* Blue 500 */
+  --color-secondary-hover: #2563EB; /* Blue 600 */
+  --color-accent: #F59E0B; /* Amber 500 */
+  
+  --color-background: #F9FAFB; /* Gray 50 */
+  --color-surface: #FFFFFF;
+  
+  --color-text-main: #111827; /* Gray 900 */
+  --color-text-muted: #6B7280; /* Gray 500 */
+  --color-text-light: #F3F4F6; /* Gray 100 */
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-heading: "Outfit", system-ui, sans-serif;
+  
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}

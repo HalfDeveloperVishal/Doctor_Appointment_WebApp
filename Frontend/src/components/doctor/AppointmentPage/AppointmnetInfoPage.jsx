@@ -131,63 +131,106 @@ const DoctorBookingsPage = () => {
 
 export default DoctorBookingsPage;
 
-/* -----------------------------
-   TABLE COMPONENT
------------------------------- */
-const TableSection = ({ bookings, handleReject }) => (
-  <div className="overflow-x-auto px-5 py-4">
-    <table className="w-full text-sm border-collapse">
-      <thead>
-        <tr className="bg-gray-100 text-left">
-          <th className="p-3 border">Patient Name</th>
-          <th className="p-3 border">Phone</th>
-          <th className="p-3 border">Email</th>
-          <th className="p-3 border">DOB</th>
-          <th className="p-3 border">Reason</th>
-          <th className="p-3 border">Symptoms</th>
-          <th className="p-3 border">Time</th>
-          <th className="p-3 border">Status</th>
-          <th className="p-3 border">Action</th>
-        </tr>
-      </thead>
+const TableSection = ({ bookings, handleReject }) => {
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "asc",
+  });
 
-      <tbody>
-        {bookings.map((booking) => {
-          const p = booking.patient_info || {};
+  // ---- SORTING LOGIC FOR DATE ONLY ----
+  const sortedBookings = [...bookings].sort((a, b) => {
+    if (sortConfig.key !== "date") return 0;
 
-          return (
-            <tr key={booking.id} className="hover:bg-gray-50">
-              <td className="p-3 border font-semibold">{p.full_name || booking.patient_full_name}</td>
-              <td className="p-3 border">{p.phone_number || "N/A"}</td>
-              <td className="p-3 border">{p.email || "N/A"}</td>
-              <td className="p-3 border">{p.date_of_birth || "N/A"}</td>
-              <td className="p-3 border">{p.reason_to_visit || "N/A"}</td>
-              <td className="p-3 border">{p.symptoms_or_concerns || "N/A"}</td>
-              <td className="p-3 border">
-                {booking.start_time} – {booking.end_time}
-              </td>
-              <td className="p-3 border">
-                {booking.is_rejected ? (
-                  <span className="text-red-600 font-semibold">Rejected</span>
-                ) : (
-                  <span className="text-green-600 font-semibold">Accepted</span>
-                )}
-              </td>
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
 
-              <td className="p-3 border">
-                {!booking.is_rejected && (
-                  <button
-                    onClick={() => handleReject(booking.id)}
-                    className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
-                  >
-                    Reject
-                  </button>
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  </div>
-);
+    if (dateA < dateB) return sortConfig.direction === "asc" ? -1 : 1;
+    if (dateA > dateB) return sortConfig.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = () => {
+    setSortConfig((prev) => ({
+      key: "date",
+      direction: prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  const sortIcon = () =>
+    sortConfig.direction === "asc" ? "▲" : "▼";
+
+  return (
+    <div className="overflow-x-auto px-5 py-4">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="bg-gray-100 text-left">
+            <th className="p-3 border">Patient Name</th>
+            <th className="p-3 border">Phone</th>
+            <th className="p-3 border">Email</th>
+            <th className="p-3 border">DOB</th>
+            <th className="p-3 border">Reason</th>
+            <th className="p-3 border">Symptoms</th>
+
+            {/* SORTABLE DATE COLUMN */}
+            <th
+              className="p-3 border cursor-pointer"
+              onClick={handleSort}
+            >
+              Date {sortIcon()}
+            </th>
+
+            <th className="p-3 border">Time</th>
+            <th className="p-3 border">Status</th>
+            <th className="p-3 border">Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {sortedBookings.map((booking) => {
+            const p = booking.patient_info || {};
+
+            return (
+              <tr key={booking.id} className="hover:bg-gray-50">
+                <td className="p-3 border font-semibold">
+                  {p.full_name || booking.patient_full_name}
+                </td>
+
+                <td className="p-3 border">{p.phone_number || "N/A"}</td>
+                <td className="p-3 border">{p.email || "N/A"}</td>
+                <td className="p-3 border">{p.date_of_birth || "N/A"}</td>
+                <td className="p-3 border">{p.reason_to_visit || "N/A"}</td>
+                <td className="p-3 border">{p.symptoms_or_concerns || "N/A"}</td>
+
+                {/* SORTABLE DATE */}
+                <td className="p-3 border">{booking.date}</td>
+
+                <td className="p-3 border">
+                  {booking.start_time} – {booking.end_time}
+                </td>
+
+                <td className="p-3 border">
+                  {booking.is_rejected ? (
+                    <span className="text-red-600 font-semibold">Rejected</span>
+                  ) : (
+                    <span className="text-green-600 font-semibold">Accepted</span>
+                  )}
+                </td>
+
+                <td className="p-3 border">
+                  {!booking.is_rejected && (
+                    <button
+                      onClick={() => handleReject(booking.id)}
+                      className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                    >
+                      Reject
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};

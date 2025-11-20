@@ -7,16 +7,16 @@ import Chatbot from '../../Chatbot/Chatbot'
 
 const FindDoctorPage = () => {
   return (
-    <div style={{ backgroundColor: '#F9FAFB' }}>
-        <Navbar/>
-        <FindDoctorBanner/>
-        {/* <DoctorFilterBar/> */}
-        <DoctorListing/>
-        <div className="fixed bottom-5 right-5 z-50">
-                <Chatbot/>
-              </div>
+    <div className="min-h-screen bg-[var(--color-background)]">
+      <Navbar />
+      <FindDoctorBanner />
+      {/* <DoctorFilterBar/> */}
+      <DoctorListing />
+      <div className="fixed bottom-5 right-5 z-50">
+        <Chatbot />
+      </div>
     </div>
-    
+
   )
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { HeartPulse } from 'lucide-react'; // icon
+import { HeartPulse } from 'lucide-react';
 
 const specialties = [
   'Cardiology', 'Neurology', 'Dermatology', 'Orthopedics',
@@ -9,22 +9,22 @@ const specialties = [
 
 const FindSpecialists = () => {
   return (
-    <section className="py-16 px-4 bg-white text-center">
-      <h2 className="text-3xl font-bold text-gray-900 mb-3">Find Specialists</h2>
-      <p className="text-gray-600 mb-10 text-lg max-w-2xl mx-auto">
-        Browse our network of verified healthcare professionals across all specialties
+    <section className="py-20 px-4 bg-[var(--color-background)] text-center">
+      <h2 className="text-3xl md:text-4xl font-bold text-[var(--color-text-main)] mb-4 font-[var(--font-heading)]">Find Specialists</h2>
+      <p className="text-[var(--color-text-muted)] mb-12 text-lg max-w-2xl mx-auto">
+        Browse our network of verified healthcare professionals across all specialties to find the right care for you.
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 max-w-7xl mx-auto">
         {specialties.map((spec, index) => (
           <div
             key={index}
-            className="bg-white border border-gray-200  rounded-xl p-6 flex flex-col items-center shadow-sm transform transition-transform duration-300 hover:scale-105 hover:shadow-lg"
+            className="bg-[var(--color-surface)] border border-gray-100 rounded-2xl p-6 flex flex-col items-center shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
           >
-            <div className="bg-teal-100 p-3 rounded-xl mb-4">
-              <HeartPulse className="text-teal-600 w-6 h-6" />
+            <div className="bg-teal-50 p-4 rounded-full mb-4 group-hover:bg-[var(--color-primary)] transition-colors duration-300">
+              <HeartPulse className="text-[var(--color-primary)] w-6 h-6 group-hover:text-white transition-colors duration-300" />
             </div>
-            <p className="font-medium text-gray-900">{spec}</p>
+            <p className="font-semibold text-[var(--color-text-main)] text-sm md:text-base">{spec}</p>
           </div>
         ))}
       </div>

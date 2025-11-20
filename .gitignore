@@ -1,0 +1,70 @@
+# -------------------------------
+# Python / Django
+# -------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyd
+*.sqlite3
+db.sqlite3
+*.log
+*.pot
+*.pyc
+*.mo
+
+# Django migrations
+**/migrations/**/*
+!**/migrations/__init__.py
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Django secrets
+*.env
+.env.*
+config/settings/local.py
+secret_key.txt
+
+# Media and static
+media/
+staticfiles/
+static/
+build/
+
+# -------------------------------
+# Node / React
+# -------------------------------
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+
+# React build
+/dist
+/build
+/.parcel-cache
+/.next
+/out
+
+# -------------------------------
+# IDE / Editor files
+# -------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# -------------------------------
+# Other
+# -------------------------------
+*.bak
+*.tmp
+coverage/
+pytest_cache/

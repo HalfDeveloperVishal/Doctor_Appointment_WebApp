@@ -24,33 +24,33 @@ const testimonials = [
 
 const TestimonialSection = () => {
   return (
-    <section className="py-16 px-4 bg-[#f9fafb] text-center">
-      <h2 className="text-3xl font-bold text-gray-900 mb-2">What Our Patients Say</h2>
-      <p className="text-gray-600 mb-10 text-lg max-w-2xl mx-auto">
-        Trusted by thousands of patients for quality healthcare booking
+    <section className="py-20 px-4 bg-[var(--color-background)] text-center">
+      <h2 className="text-3xl md:text-4xl font-bold text-[var(--color-text-main)] mb-4 font-[var(--font-heading)]">What Our Patients Say</h2>
+      <p className="text-[var(--color-text-muted)] mb-12 text-lg max-w-2xl mx-auto">
+        Trusted by thousands of patients for quality healthcare booking and management.
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
         {testimonials.map((t, i) => (
           <div
             key={i}
-            className="bg-white border border-gray-200 rounded-xl p-6 text-left shadow-sm hover:shadow-md transition duration-300"
+            className="bg-[var(--color-surface)] border border-gray-100 rounded-2xl p-8 text-left shadow-sm hover:shadow-lg transition-all duration-300"
           >
-            <div className="flex gap-1 mb-4 text-yellow-400">
+            <div className="flex gap-1 mb-6 text-[var(--color-accent)]">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} size={18} fill="currentColor" />
+                <Star key={i} size={20} fill="currentColor" />
               ))}
             </div>
-            <p className="text-gray-700 text-base mb-6">"{t.text}"</p>
-            <div className="flex items-center gap-3">
+            <p className="text-[var(--color-text-main)] text-base mb-8 leading-relaxed italic">"{t.text}"</p>
+            <div className="flex items-center gap-4">
               <img
                 src={t.image}
                 alt={t.name}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-12 h-12 rounded-full object-cover border-2 border-gray-100"
               />
               <div>
-                <p className="font-semibold text-gray-900">{t.name}</p>
-                <p className="text-sm text-gray-500">{t.role}</p>
+                <p className="font-bold text-[var(--color-text-main)]">{t.name}</p>
+                <p className="text-sm text-[var(--color-text-muted)]">{t.role}</p>
               </div>
             </div>
           </div>

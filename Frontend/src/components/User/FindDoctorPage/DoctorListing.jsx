@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MapPin, Star } from "lucide-react";
+import { MapPin, Star, BadgeIndianRupee } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -19,6 +19,11 @@ const DoctorPage = () => {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
+
+  const formatFee = (fee) => {
+    if (!fee) return "N/A";
+    return Number(fee).toLocaleString("en-IN");
+  };
 
   // Fetch specialties (static for now)
   useEffect(() => {
@@ -40,7 +45,9 @@ const DoctorPage = () => {
         params.push(`specialization=${spec.toLowerCase()}`);
       }
       if (search.trim() !== "") {
-        params.push(`search=${encodeURIComponent(search.trim().toLowerCase())}`);
+        params.push(
+          `search=${encodeURIComponent(search.trim().toLowerCase())}`
+        );
       }
       if (params.length > 0) url += `?${params.join("&")}`;
 
@@ -73,7 +80,7 @@ const DoctorPage = () => {
   };
 
   return (
-    <div className="min-h-screen px-6" style={{ backgroundColor: "#F9FAFB" }}>
+    <div className="min-h-screen px-6 bg-[var(--color-background)] pb-12">
       {/* Error Alert */}
       {error && (
         <div className="max-w-3xl mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
@@ -82,17 +89,17 @@ const DoctorPage = () => {
       )}
 
       {/* Search & Filter */}
-      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-md p-6 flex flex-col md:flex-row gap-3 mb-8">
+      <div className="max-w-6xl mx-auto bg-[var(--color-surface)] rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col md:flex-row gap-4 mb-8 -mt-8 relative z-10">
         <input
           type="text"
           placeholder="Search doctors or clinics..."
-          className="outline-none flex-1 border border-gray-300 rounded-xl px-3 py-2 text-gray-700 focus:outline-none focus:border-blue-500"
+          className="outline-none flex-1 border border-gray-200 rounded-xl px-4 py-3 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value.toLowerCase())}
         />
 
         <select
-          className="border border-gray-300 rounded-xl px-3 py-2 text-gray-700 focus:outline-none focus:border-blue-500 flex-1"
+          className="border border-gray-200 rounded-xl px-4 py-3 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] flex-1 transition-all bg-white"
           value={specialty}
           onChange={(e) => setSpecialty(e.target.value)}
         >
@@ -104,54 +111,62 @@ const DoctorPage = () => {
 
       {/* Doctor Listing */}
       {doctors.length === 0 ? (
-        <p className="text-center text-gray-500">No doctors found.</p>
+        <p className="text-center text-[var(--color-text-muted)]">No doctors found.</p>
       ) : (
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {doctors.map((doctor, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl shadow-md p-5 flex flex-col justify-between h-full transform transition-all duration-300 hover:shadow-lg"
+              className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between h-full transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
             >
               <div className="flex items-start gap-4">
                 <img
-                  src={doctor.profile_photo_url || "https://via.placeholder.com/80"}
+                  src={
+                    doctor.profile_photo_url || "https://via.placeholder.com/80"
+                  }
                   alt={doctor.full_name}
-                  className="w-14 h-14 rounded-full object-cover"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-50"
                 />
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-lg font-bold text-[var(--color-text-main)]">
                     {doctor.full_name}
                   </h2>
-                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full mt-1 inline-block">
+                  <span className="bg-teal-50 text-[var(--color-primary)] text-xs font-semibold px-2.5 py-1 rounded-full mt-1 inline-block">
                     {doctor.specialization_display}
                   </span>
                 </div>
               </div>
 
-              <p className="text-gray-600 text-sm mt-2">
+              <p className="text-[var(--color-text-muted)] text-sm mt-3">
                 {doctor.years_of_experience} years experience
               </p>
 
-              <div className="flex items-center text-sm text-gray-600 mt-2">
-                <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                <span className="font-medium">{doctor.rating || "4.8"}</span>
+              <div className="flex items-center text-sm text-[var(--color-text-muted)] mt-3">
+                <Star className="w-4 h-4 text-[var(--color-accent)] mr-1 fill-current" />
+                <span className="font-medium text-[var(--color-text-main)]">{doctor.rating || "4.8"}</span>
                 <span className="ml-1">
                   ({doctor.reviews_count || "200"} reviews)
                 </span>
               </div>
 
-              <div className="flex items-center text-sm text-gray-600 mt-2">
-                <MapPin className="w-4 h-4 text-gray-500 mr-1" />
+              <div className="flex items-center text-sm text-[var(--color-text-muted)] mt-2">
+                <MapPin className="w-4 h-4 text-gray-400 mr-1" />
                 <span>{doctor.address}</span>
               </div>
+              <div className="flex items-center text-sm text-[var(--color-text-muted)] mt-2">
+                <BadgeIndianRupee className="w-4 h-4 text-green-600 mr-1" />
+                <span className="font-medium text-[var(--color-text-main)]">
+                  ₹ {formatFee(doctor.consultation_fee)}
+                </span>
+              </div>
 
-              <div className="flex gap-3 mt-4">
-                <button className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition">
+              <div className="flex gap-3 mt-6">
+                <button className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-[var(--color-text-main)] hover:bg-gray-50 transition font-medium text-sm">
                   View Profile
                 </button>
                 <button
                   onClick={() => handleBookNow(doctor.id)}
-                  className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] transition font-medium text-sm shadow-md"
                 >
                   Book Now
                 </button>

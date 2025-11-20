@@ -12,12 +12,15 @@ const MultiStepSlotBooking = () => {
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [disabledDates, setDisabledDates] = useState([]);
   const [slots, setSlots] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("counter");
+  const [doctorFee, setDoctorFee] = useState(0);
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -27,6 +30,41 @@ const MultiStepSlotBooking = () => {
     reason: "",
     symptoms: "",
   });
+
+  
+useEffect(() => {
+  const fetchDoctorFee = async () => {
+    try {
+      const res = await axios.get(`http://localhost:8000/doctor/${id}/details/`);
+      setDoctorFee(res.data.consultation_fee);
+    } catch (err) {
+      console.error("Error fetching doctor fee:", err);
+    }
+  };
+
+  fetchDoctorFee();
+}, [id]);
+
+  // ✅ Load Razorpay script on component mount
+  useEffect(() => {
+    const loadRazorpayScript = () => {
+      return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.onload = () => {
+          console.log("Razorpay script loaded successfully");
+          resolve(true);
+        };
+        script.onerror = () => {
+          console.error("Failed to load Razorpay script");
+          resolve(false);
+        };
+        document.body.appendChild(script);
+      });
+    };
+
+    loadRazorpayScript();
+  }, []);
 
   // 🔐 Check login on mount
   useEffect(() => {
@@ -91,14 +129,20 @@ const MultiStepSlotBooking = () => {
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
+    setSelectedSlot(null); // Reset slot when date changes
     if (date) fetchSlots(format(date, "yyyy-MM-dd"));
   };
 
+  // ---------------- Payment & Booking Logic ----------------
   const handleBooking = async () => {
     if (!selectedDate || !selectedSlot) {
       setMessage("Please select date and slot");
       return;
     }
+
+    // Clear previous messages
+    setMessage("");
+    setSuccessMsg("");
 
     const payload = {
       date: format(selectedDate, "yyyy-MM-dd"),
@@ -110,23 +154,113 @@ const MultiStepSlotBooking = () => {
       date_of_birth: formData.dob,
       reason_to_visit: formData.reason,
       symptoms_or_concerns: formData.symptoms,
+      payment_method: paymentMethod,
     };
 
     try {
-      await axios.post(
+      setBookingLoading(true);
+
+      // 1️⃣ Create booking
+      const bookingRes = await axios.post(
         `http://localhost:8000/patient/${id}/book_slot/`,
         payload,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` },
         }
       );
-      setSuccessMsg(
-        `Appointment booked successfully for ${selectedSlot.start_time} - ${selectedSlot.end_time}`
-      );
-      setStep(4);
-      setTimeout(() => navigate("/"), 4000);
+
+      const booking_id = bookingRes.data.id;
+      const startTime = selectedSlot.start_time;
+      const endTime = selectedSlot.end_time;
+
+      if (paymentMethod === "counter") {
+        // ✅ Counter payment - booking complete
+        setBookingLoading(false);
+        setSuccessMsg(`Appointment booked successfully for ${startTime} - ${endTime}`);
+        setStep(4);
+        setTimeout(() => navigate("/"), 4000);
+      } else {
+        // 2️⃣ Online Payment Flow
+        console.log("Initiating online payment...");
+
+        // Check if Razorpay is loaded
+        if (!window.Razorpay) {
+          setMessage("Payment gateway not loaded. Please refresh and try again.");
+          setBookingLoading(false);
+          return;
+        }
+
+        // Create payment order
+        const orderRes = await axios.post(
+          "http://localhost:8000/patient/create_payment_order/",
+          { booking_id, amount: doctorFee },
+          { headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` } }
+        );
+
+        const { order_id, amount: r_amount, currency,razorpay_key } = orderRes.data;
+        console.log("Payment order created:", order_id);
+
+        setBookingLoading(false);
+
+        const options = {
+          key: razorpay_key, 
+          amount: r_amount,
+          currency: currency,
+          order_id: order_id,
+          name: "Doctor Appointment",
+          description: "Appointment Payment",
+          handler: async function (response) {
+            console.log("Payment successful:", response);
+            try {
+              setBookingLoading(true);
+              
+              // Verify payment
+              await axios.post(
+                "http://localhost:8000/patient/verify_payment/",
+                {
+                  booking_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                },
+                { headers: { Authorization: `Bearer ${localStorage.getItem("access_token")}` } }
+              );
+
+              setBookingLoading(false);
+              setSuccessMsg(`Appointment booked successfully for ${startTime} - ${endTime}`);
+              setStep(4);
+              setTimeout(() => navigate("/"), 4000);
+            } catch (err) {
+              console.error("Payment verification failed:", err);
+              setBookingLoading(false);
+              setMessage("Payment verification failed. Please contact support.");
+            }
+          },
+          prefill: {
+            name: formData.fullName,
+            email: formData.email,
+            contact: formData.phoneNumber,
+          },
+          theme: { color: "#6366f1" },
+          modal: {
+            ondismiss: function() {
+              console.log("Payment cancelled by user");
+              setMessage("Payment cancelled. Your booking is still pending. Please complete payment to confirm.");
+            }
+          }
+        };
+
+        console.log("Opening Razorpay modal...");
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+          console.error("Payment failed:", response.error);
+          setMessage(`Payment failed: ${response.error.description}`);
+        });
+        rzp.open();
+      }
     } catch (err) {
       console.error("Booking failed:", err);
+      setBookingLoading(false);
       if (err.response?.status === 401) {
         alert("Please login to book an appointment.");
         navigate("/login");
@@ -187,9 +321,13 @@ const MultiStepSlotBooking = () => {
               slots={slots}
               setSelectedSlot={setSelectedSlot}
               loading={loading}
+              bookingLoading={bookingLoading}
               message={message}
               onBack={() => setStep(2)}
               onBook={handleBooking}
+              paymentMethod={paymentMethod}
+              setPaymentMethod={setPaymentMethod}
+              doctorFee={doctorFee}
             />
           )}
           {step === 4 && <SuccessPage successMsg={successMsg} />}
@@ -226,7 +364,7 @@ const MedicalInfo = React.memo(({ formData, handleChange, onBack, onNext }) => (
 ));
 
 const SlotBooking = React.memo(
-  ({ selectedDate, selectedSlot, handleDateChange, slots, setSelectedSlot, loading, message, onBack, onBook }) => (
+  ({ selectedDate, selectedSlot, handleDateChange, slots, setSelectedSlot, loading, bookingLoading, message, onBack, onBook, paymentMethod, setPaymentMethod,doctorFee }) => (
     <div>
       <h2 className="text-2xl font-bold mb-4">Select Appointment Slot</h2>
       <DatePicker
@@ -237,8 +375,13 @@ const SlotBooking = React.memo(
         placeholderText="Select a date"
         minDate={new Date()}
       />
-      {message && <p className="mt-3 text-red-500">{message}</p>}
-      {loading && <p className="mt-4">Loading slots...</p>}
+      {message && <p className="mt-3 text-red-500 text-sm bg-red-50 p-3 rounded">{message}</p>}
+      {loading && (
+        <div className="mt-4 flex items-center">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+          <p className="ml-2 text-gray-600">Loading slots...</p>
+        </div>
+      )}
       {!loading && slots.length > 0 && (
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {slots.map((slot, i) => (
@@ -259,7 +402,30 @@ const SlotBooking = React.memo(
           ))}
         </div>
       )}
-      <NavigationButtons back={onBack} next={onBook} nextLabel="Book Appointment" />
+
+      {/* Payment method selection */}
+      {selectedSlot && (
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <p className="text-sm font-medium mb-2">Select Payment Method:</p>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" value="counter" checked={paymentMethod === "counter"} onChange={(e) => setPaymentMethod(e.target.value)} />
+              Pay at Counter
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" value="online" checked={paymentMethod === "online"} onChange={(e) => setPaymentMethod(e.target.value)} />
+              Pay Online (₹{doctorFee})
+            </label>
+          </div>
+        </div>
+      )}
+
+      <NavigationButtons 
+        back={onBack} 
+        next={onBook} 
+        nextLabel={bookingLoading ? "Processing..." : "Book Appointment"} 
+        disableNext={!selectedSlot || bookingLoading}
+      />
     </div>
   )
 );
@@ -273,7 +439,6 @@ const SuccessPage = React.memo(({ successMsg }) => (
 ));
 
 // -------- Shared Components --------
-
 const Input = ({ label, name, value, onChange, type = "text", required = false }) => (
   <div className="w-full max-w-xs sm:max-w-full font-mono">
     <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor={name}>
@@ -330,17 +495,6 @@ const NavigationButtons = ({ back, next, nextLabel = "Continue", disableNext = f
             : "bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-blue-600 hover:via-indigo-700 hover:to-purple-700 hover:shadow-[0_0_25px_rgba(99,102,241,0.8)]"
         }`}
     >
-      <svg
-        className={`w-5 h-5 mr-2 transition-transform duration-300 ${
-          disableNext ? "" : "group-hover:rotate-12"
-        }`}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-      </svg>
       {nextLabel}
     </button>
   </div>

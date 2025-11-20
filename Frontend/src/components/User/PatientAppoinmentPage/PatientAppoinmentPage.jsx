@@ -14,6 +14,7 @@ const PatientAppointmentsPage = () => {
   const [showUpcoming, setShowUpcoming] = useState(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
+  
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -129,30 +130,92 @@ const PatientAppointmentsPage = () => {
 
 export default PatientAppointmentsPage;
 
-/* ===================================================================
-   TABLE SECTION COMPONENT
-=================================================================== */
-/* ===================================================================
-   TABLE SECTION COMPONENT (UPDATED WITH STATUS)
-=================================================================== */
+// ============================================
+// TABLE SECTION COMPONENT
+// ============================================
 const TableSection = ({ appointments }) => {
+  const [sortConfig, setSortConfig] = useState({
+    key: null,
+    direction: "asc",
+  });
+
   if (!appointments.length) return null;
 
-  // Badge styling
-  const getStatusBadge = (isRejected) => {
-    const base = "px-3 py-1 text-xs font-semibold rounded-full";
+  // ---------- SORTING LOGIC ----------
+  const sortedAppointments = [...appointments].sort((a, b) => {
+    if (!sortConfig.key) return 0;
+    const key = sortConfig.key;
 
-    if (isRejected) {
-      return base + " bg-red-100 text-red-700"; // rejected
+    let valA, valB;
+
+    if (key === "patient_name") {
+      valA = a.patient_info?.full_name || "";
+      valB = b.patient_info?.full_name || "";
+    } else {
+      valA = a[key];
+      valB = b[key];
     }
-    return base + " bg-green-100 text-green-700"; // accepted
+
+    // convert date fields
+    if (key === "date" || key === "created_at") {
+      valA = new Date(valA);
+      valB = new Date(valB);
+    }
+
+    if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+    if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // Handle click on sortable column
+  const handleSort = (key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction:
+        prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
   };
 
-  const getStatusText = (a) => {
-    if (a.is_rejected) return "Rejected";
+  // Sorting icon helper
+  const sortIcon = (key) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "▲" : "▼";
+  };
 
-    // if doctor's review is pending you can change here
-    return "Accepted";
+  // ---------- STATUS BADGE ----------
+  const getStatusBadge = (isRejected) => {
+    const base = "px-3 py-1 text-xs font-semibold rounded-full";
+    return isRejected
+      ? base + " bg-red-100 text-red-700"
+      : base + " bg-green-100 text-green-700";
+  };
+
+  const getStatusText = (a) => (a.is_rejected ? "Rejected" : "Accepted");
+
+  // ---------- PAYMENT METHOD BADGE ----------
+  const getPaymentMethodBadge = (paymentMethod) => {
+    const base = "px-3 py-1 text-xs font-semibold rounded-full";
+    return paymentMethod === "online"
+      ? base + " bg-blue-100 text-blue-700"
+      : base + " bg-purple-100 text-purple-700";
+  };
+
+  const getPaymentMethodText = (method) => {
+    return method === "online" ? "Paid Online" : "Pay at Counter";
+  };
+
+  const formatDateTime = (dateTimeString) => {
+    if (!dateTimeString) return "N/A";
+
+    const dateObj = new Date(dateTimeString);
+
+    const date = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD
+    const time = dateObj.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return `${date} (${time})`;
   };
 
   return (
@@ -164,18 +227,45 @@ const TableSection = ({ appointments }) => {
             <th className="border p-3">Specialization</th>
             <th className="border p-3">Clinic</th>
             <th className="border p-3">Address</th>
-            <th className="border p-3">Date</th>
+
+            {/* SORTABLE DATE COLUMN */}
+            <th
+              className="border p-3 cursor-pointer"
+              onClick={() => handleSort("date")}
+            >
+              Date {sortIcon("date")}
+            </th>
+
             <th className="border p-3">Slot</th>
+
+            {/* SORTABLE PATIENT NAME */}
+            <th
+              className="border p-3 cursor-pointer"
+              onClick={() => handleSort("patient_name")}
+            >
+              Patient Name {sortIcon("patient_name")}
+            </th>
+
             <th className="border p-3">Reason</th>
             <th className="border p-3">Symptoms</th>
-            <th className="border p-3">Doctor Email</th>
-            <th className="border p-3">Booked On</th>
-            <th className="border p-3">Status</th> {/* NEW */}
+
+            {/* SORTABLE BOOKED ON */}
+            <th
+              className="border p-3 cursor-pointer"
+              onClick={() => handleSort("created_at")}
+            >
+              Booked On {sortIcon("created_at")}
+            </th>
+
+            {/* ✅ NEW: PAYMENT METHOD COLUMN */}
+            <th className="border p-3">Payment Method</th>
+            
+            <th className="border p-3">Status</th>
           </tr>
         </thead>
 
         <tbody>
-          {appointments.map((a) => {
+          {sortedAppointments.map((a) => {
             const info = a.patient_info || {};
 
             return (
@@ -185,18 +275,20 @@ const TableSection = ({ appointments }) => {
                 <td className="border p-3">{a.clinic_name}</td>
                 <td className="border p-3">{a.address}</td>
                 <td className="border p-3">{a.date}</td>
-
                 <td className="border p-3">
                   {a.start_time} – {a.end_time}
                 </td>
-
+                <td className="border p-3">{info.full_name || "N/A"}</td>
                 <td className="border p-3">{info.reason_to_visit || "N/A"}</td>
                 <td className="border p-3">{info.symptoms_or_concerns || "N/A"}</td>
+                <td className="border p-3">{formatDateTime(a.created_at)}</td>
 
-                <td className="border p-3">{a.doctor_email || "N/A"}</td>
-                <td className="border p-3">{a.created_at}</td>
+                <td className="border p-3">
+                  <span className={getPaymentMethodBadge(a.payment_method)}>
+                    {getPaymentMethodText(a.payment_method)}
+                  </span>
+                </td>
 
-                {/* STATUS COLUMN */}
                 <td className="border p-3">
                   <span className={getStatusBadge(a.is_rejected)}>
                     {getStatusText(a)}

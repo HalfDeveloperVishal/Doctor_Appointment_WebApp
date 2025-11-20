@@ -13,16 +13,20 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'doctor', 'doctor_name',
             'patient', 'patient_name',
-            'date', 'start_time', 'end_time', 'created_at','is_rejected', 'rejection_reason'
+            'date', 'start_time', 'end_time', 'created_at',
+            'is_rejected', 'rejection_reason',
+            'payment_method', 'payment_status', 'payment_id'
         ]
-        read_only_fields = ['id', 'patient', 'created_at', 'doctor_name', 'patient_name','is_rejected', 'rejection_reason']
+        read_only_fields = ['id', 'patient', 'created_at', 'doctor_name', 'patient_name',
+                            'is_rejected', 'rejection_reason', 'payment_status', 'payment_id']
+
 
 class PatientBookingInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatientBookingInfo
         fields = [
             'id',
-            'booking',  # ForeignKey to Booking
+            'booking', 
             'full_name',
             'email',
             'phone_number',
@@ -55,7 +59,7 @@ class PatientAppointmentSerializer(serializers.ModelSerializer):
             'id',
             'doctor_name', 'doctor_email', 'clinic_name',
             'specialization', 'address', 'qualifications', 'date', 'start_time', 'end_time', 'created_at',
-            'patient_info','is_rejected', 'rejection_reason'
+            'patient_info','is_rejected', 'rejection_reason','payment_method', 'payment_status'
         ]
 
     def get_patient_info(self, obj):

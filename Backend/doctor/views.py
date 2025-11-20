@@ -147,3 +147,15 @@ class AppointmentStatsView(APIView): #this voew gives the ocunt of appointments
         }
 
         return Response(response_data, status=200)
+
+class DoctorPublicDetailView(APIView):
+    permission_classes = [permissions.AllowAny]  
+
+    def get(self, request, id):
+        try:
+            doctor = DoctorProfile.objects.get(id=id)
+        except DoctorProfile.DoesNotExist:
+            return Response({"error": "Doctor not found"}, status=404)
+
+        serializer = DoctorProfileSerializer(doctor, context={'request': request})
+        return Response(serializer.data, status=200)

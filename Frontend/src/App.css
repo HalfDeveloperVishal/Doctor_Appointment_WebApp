@@ -1,1 +1,18 @@
 @import "tailwindcss";
+@import "./theme.css";
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-main);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    color: var(--color-text-main);
+  }
+}

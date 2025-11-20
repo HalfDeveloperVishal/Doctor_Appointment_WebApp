@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -164,4 +165,7 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-GOOGLE_CLIENT_ID = "857243521134-8c07pnjubg8hrf4uhd0mfu25ldcnlnjk.apps.googleusercontent.com"
+# GOOGLE_CLIENT_ID = "857243521134-8c07pnjubg8hrf4uhd0mfu25ldcnlnjk.apps.googleusercontent.com"
+
+# RAZORPAY_KEY_ID = "rzp_test_RXZQM4RBIp40NB"
+# RAZORPAY_KEY_SECRET = "qX3iANYUacAJM3wn92oFOu4m"

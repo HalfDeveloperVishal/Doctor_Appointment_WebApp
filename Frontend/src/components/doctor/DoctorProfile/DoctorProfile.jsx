@@ -11,6 +11,7 @@ import {
   MdStar,
   MdCameraAlt,
 } from "react-icons/md";
+import { BadgeIndianRupee } from "lucide-react";
 
 const DoctorProfileView = () => {
   const navigate = useNavigate();
@@ -30,6 +31,11 @@ const DoctorProfileView = () => {
     { value: "neurology", label: "Neurology" },
     { value: "orthopedics", label: "Orthopedics" },
   ];
+
+  const formatFee = (fee) => {
+    if (!fee) return "N/A";
+    return Number(fee).toLocaleString("en-IN");
+  };
 
   // Fetch profile with token refresh logic
   useEffect(() => {
@@ -278,8 +284,11 @@ const DoctorProfileView = () => {
                 <MdLocationOn /> {editedProfile.clinic_name}
               </div>
               <div className="flex items-center gap-2">
-                <MdAttachMoney /> ${editedProfile.consultation_fee} per
-                consultation
+                <BadgeIndianRupee className="w-5 h-5 text-green-600" />
+                <span className="font-medium">
+                  ₹ {formatFee(editedProfile.consultation_fee)}
+                </span>
+                <span className="text-gray-600 text-sm">per consultation</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 text-center">
@@ -567,16 +576,14 @@ const DoctorProfileView = () => {
             ) : (
               <div className="flex flex-wrap gap-2">
                 {editedProfile.qualifications ? (
-                  editedProfile.qualifications
-                    .split(",")
-                    .map((q, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                      >
-                        {q.trim()}
-                      </span>
-                    ))
+                  editedProfile.qualifications.split(",").map((q, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {q.trim()}
+                    </span>
+                  ))
                 ) : (
                   <span className="text-gray-500">
                     No qualifications listed.

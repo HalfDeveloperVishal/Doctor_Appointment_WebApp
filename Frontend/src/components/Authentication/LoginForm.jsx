@@ -3,9 +3,8 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../User/Context/AuthContext";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import styled from "styled-components";
+import "react-toastify/dist/ReactToastify.css";
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -15,16 +14,13 @@ const LoginForm = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
 
-  // Extract role from query params
   const params = new URLSearchParams(location.search);
   const roleParam = params.get("role");
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Common navigation after login
   const handleLoginSuccess = async (loginData) => {
     localStorage.setItem("access_token", loginData.access);
     localStorage.setItem("refresh_token", loginData.refresh);
@@ -52,8 +48,7 @@ const LoginForm = () => {
           navigate("/doctor-profile-create");
         }
       } catch (error) {
-        console.error("Profile check error:", error);
-        toast.error("Error verifying doctor profile. Redirecting...");
+        toast.error("Error verifying profile.");
         navigate("/doctor-dashboard");
       }
     } else {
@@ -64,7 +59,6 @@ const LoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       const res = await axios.post(
         "http://localhost:8000/accounts/login/",
@@ -77,30 +71,22 @@ const LoginForm = () => {
 
       await handleLoginSuccess(res.data);
     } catch (err) {
-      console.error("Login error:", err);
-
-      // 🔥 Improved Toastify error messages
       const errorMsg =
         err.response?.data?.message ||
         err.response?.data?.error ||
-        err.response?.data?.detail ||
-        "Invalid email or password. Please try again.";
-
+        "Invalid credentials";
       toast.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Google Login Handler
   const handleGoogleLogin = async (credentialResponse) => {
     setIsLoading(true);
     try {
       const res = await axios.post(
         "http://localhost:8000/accounts/google-login/",
-        {
-          credential: credentialResponse.credential,
-        },
+        { credential: credentialResponse.credential },
         {
           headers: { "Content-Type": "application/json" },
           withCredentials: true,
@@ -109,14 +95,7 @@ const LoginForm = () => {
 
       await handleLoginSuccess(res.data);
     } catch (err) {
-      console.error("Google login error:", err);
-
-      const errorMsg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Google login failed. Please try again.";
-
-      toast.error(errorMsg);
+      toast.error("Google login failed");
     } finally {
       setIsLoading(false);
     }
@@ -124,180 +103,74 @@ const LoginForm = () => {
 
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <StyledWrapper>
-        <form className="form" onSubmit={handleSubmit}>
-          <h2 className="form-title">Log In</h2>
+      <div className="min-h-screen bg-[var(--color-background)] flex justify-center items-center p-4">
+        <div className="w-full max-w-[380px] bg-[var(--color-surface)] p-8 rounded-2xl shadow-lg border border-gray-100">
+          <h2 className="text-center text-[var(--color-primary)] text-3xl font-bold mb-2">Login</h2>
+          <p className="text-center text-[var(--color-text-muted)] mb-6 text-sm">Welcome back! Please login to continue.</p>
 
-          {/* Google Login */}
-          <div className="google-login-container">
+          {/* GOOGLE LOGIN */}
+          <div className="flex justify-center mb-4">
             <GoogleLogin
               onSuccess={handleGoogleLogin}
               onError={() => toast.error("Google login failed")}
-              theme="outline"
-              size="large"
-              width="320"
+              width="330"
             />
           </div>
 
-          <div className="divider">
-            <hr className="divider-line" />
-            <span className="divider-text">or</span>
-            <hr className="divider-line" />
+          <div className="flex items-center my-4 text-sm text-[var(--color-text-muted)] justify-center">
+            <div className="h-px bg-gray-200 flex-1"></div>
+            <span className="px-3 bg-[var(--color-surface)]">OR</span>
+            <div className="h-px bg-gray-200 flex-1"></div>
           </div>
 
-          <span className="input-span">
-            <label htmlFor="email" className="label">Email</label>
-            <input
-              type="email"
-              name="email"
-              id="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </span>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-[var(--color-text-main)]">Email Address</label>
+              <input
+                type="email"
+                name="email"
+                placeholder="doctor@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+              />
+            </div>
 
-          <span className="input-span">
-            <label htmlFor="password" className="label">Password</label>
-            <input
-              type="password"
-              name="password"
-              id="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
-          </span>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-[var(--color-text-main)]">Password</label>
+              <input
+                type="password"
+                name="password"
+                placeholder="••••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
+              />
+            </div>
 
-          <span className="span">
-            <a href="#">Forgot password?</a>
-          </span>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="mt-2 p-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-full text-base font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+            >
+              {isLoading ? "Logging in..." : "Login"}
+            </button>
+          </form>
 
-          <button type="submit" className="submit" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Log in"}
-          </button>
-
-          <span className="span">
-            Don't have an account?{" "}
-            <a href="/signup?role=patient" className="signup-link">Sign up as Patient</a> |{" "}
-            <a href="/signup?role=doctor" className="signup-link">Sign up as Doctor</a>
-          </span>
-        </form>
-      </StyledWrapper>
+          <p className="mt-6 text-center text-sm text-[var(--color-text-main)]">
+            Not registered?{" "}
+            <div className="mt-1 space-x-3">
+              <a href="/signup?role=doctor" className="text-[var(--color-primary)] font-semibold hover:underline">Doctor Signup</a>
+              <span className="text-gray-300">|</span>
+              <a href="/signup?role=patient" className="text-[var(--color-primary)] font-semibold hover:underline">Patient Signup</a>
+            </div>
+          </p>
+        </div>
+      </div>
     </GoogleOAuthProvider>
   );
 };
-
-const StyledWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: #ffffff;
-
-  .form {
-    --bg-dark: #707070;
-    --clr: #58bc82;
-    --clr-alpha: #9c9c9c60;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    width: 100%;
-    max-width: 320px;
-    background: transparent;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .form-title {
-    color: var(--bg-dark);
-    font-size: 1.8rem;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .google-login-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 0.5rem;
-  }
-
-  .divider {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin: 0.5rem 0;
-  }
-
-  .divider-line {
-    flex: 1;
-    border: none;
-    border-top: 1px solid #d1d5db;
-  }
-
-  .divider-text {
-    color: #6b7280;
-    font-size: 0.875rem;
-  }
-
-  .form .input-span {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .form input {
-    border-radius: 0.5rem;
-    padding: 1rem 0.75rem;
-    border: none;
-    background-color: var(--clr-alpha);
-    outline: 2px solid var(--bg-dark);
-    transition: outline 0.3s ease;
-  }
-
-  .form input:focus {
-    outline: 2px solid var(--clr);
-  }
-
-  .label {
-    color: var(--clr);
-    font-weight: 600;
-  }
-
-  .submit {
-    padding: 1rem 0.75rem;
-    border-radius: 3rem;
-    background-color: var(--bg-dark);
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    transition: all 300ms;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  .submit:hover:not(:disabled) {
-    background-color: var(--clr);
-    color: var(--bg-dark);
-  }
-
-  .submit:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .span {
-    font-size: 0.9rem;
-    color: var(--bg-dark);
-    text-align: center;
-  }
-
-  .span a {
-    color: var(--clr);
-    text-decoration: none;
-  }
-`;
 
 export default LoginForm;

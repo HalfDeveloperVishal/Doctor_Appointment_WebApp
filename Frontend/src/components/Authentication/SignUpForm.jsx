@@ -32,7 +32,6 @@ const SignUpForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 🔥 Check Terms
     if (!formData.agreeTerms) {
       toast.warn("You must agree to the terms and conditions.");
       return;
@@ -50,31 +49,24 @@ const SignUpForm = () => {
       toast.success(res.data.message || "Account created successfully!");
       navigate(`/login?role=${formData.role}`);
     } catch (err) {
-      console.error("Signup error:", err.response?.data || err);
-
-      // 🔥 Extract meaningful error text
       const backend = err.response?.data;
 
       let errorMsg =
         backend?.message ||
         backend?.error ||
         backend?.detail ||
-        backend?.email?.[0] || // Django: {"email":["A user with this email already exists."]}
-        backend?.password?.[0] || // Django password validation
+        backend?.email?.[0] ||
+        backend?.password?.[0] ||
         "Registration failed. Please check your inputs.";
 
-      // 🔥 Special case: user already exists
       if (backend?.email?.[0]?.includes("exists")) {
-        errorMsg = "User with this email already exists. Please login.";
+        errorMsg = "User with this email already exists.";
       }
 
       toast.error(errorMsg);
     }
   };
 
-  // ======================================
-  //       GOOGLE SIGNUP HANDLER
-  // ======================================
   const handleGoogleSignUp = async (credentialResponse) => {
     try {
       const res = await axios.post(
@@ -90,8 +82,6 @@ const SignUpForm = () => {
         navigate(`/login?role=${formData.role}`);
       }
     } catch (err) {
-      console.error("Google signup error:", err.response?.data || err);
-
       const backend = err.response?.data;
 
       let errorMsg =
@@ -100,12 +90,11 @@ const SignUpForm = () => {
         backend?.detail ||
         "Google signup failed.";
 
-      // If user already exists
       if (
         backend?.message?.toLowerCase().includes("exists") ||
         backend?.error?.toLowerCase().includes("exists")
       ) {
-        errorMsg = "User already exists with Google. Please log in.";
+        errorMsg = "User already exists. Please login.";
       }
 
       toast.error(errorMsg);
@@ -114,57 +103,75 @@ const SignUpForm = () => {
 
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-xl grid md:grid-cols-2 w-full max-w-5xl overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] p-4">
+        <div className="bg-[var(--color-surface)] shadow-xl rounded-2xl max-w-4xl w-full grid md:grid-cols-2 overflow-hidden border border-gray-100">
 
-          {/* Left side panel */}
-          <div className="p-10 bg-gray-900 text-white hidden md:flex flex-col justify-center">
-            <h2 className="text-3xl font-bold mb-4">Design with us</h2>
-            <p className="text-gray-300">
-              Access to thousands of design resources and templates
-            </p>
+          {/* LEFT IMAGE SECTION */}
+          <div
+            className="hidden md:flex relative text-white p-8 flex-col justify-center items-center"
+            style={{
+              backgroundImage:
+                "url('https://images.unsplash.com/photo-1580281657527-47a1b0e6c168?auto=format&fit=crop&w=900&q=80')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="absolute inset-0 bg-[var(--color-primary)] bg-opacity-80 mix-blend-multiply"></div>
+
+            <div className="relative z-10 text-center">
+              <h2 className="text-3xl font-bold mb-3 font-[var(--font-heading)]">Welcome to MedConnect</h2>
+              <p className="text-blue-50 text-base">
+                Your trusted online doctor appointment system.
+              </p>
+            </div>
           </div>
 
-          {/* Right side form */}
-          <div className="p-8">
-            <h2 className="text-2xl font-bold mb-6">
-              Sign up as <span className="capitalize text-gray-700">{role}</span>
+          {/* RIGHT FORM SECTION */}
+          <div className="p-8 md:p-10">
+            <h2 className="text-2xl font-bold text-[var(--color-primary)] mb-4">
+              Create your account as <span className="capitalize">{role}</span>
             </h2>
 
-            {/* Google Sign Up */}
-            <GoogleLogin
-              onSuccess={handleGoogleSignUp}
-              onError={() => toast.error("Google signup failed")}
-              text="signup_with"
-              shape="rectangular"
-            />
+            {/* GOOGLE SIGNUP */}
+            <div className="mb-6 flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSignUp}
+                onError={() => toast.error("Google signup failed")}
+                text="signup_with"
+                width="330"
+              />
+            </div>
 
-            <div className="flex items-center my-4">
-              <hr className="flex-1 border-gray-300" />
-              <span className="mx-2 text-gray-400">or</span>
-              <hr className="flex-1 border-gray-300" />
+            <div className="flex items-center my-6">
+              <hr className="flex-1 border-gray-200" />
+              <span className="mx-3 text-[var(--color-text-muted)] text-sm">or</span>
+              <hr className="flex-1 border-gray-200" />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
 
+              {/* NAME ROW */}
               <div className="flex gap-4">
-                <input
-                  type="text"
-                  name="first_name"
-                  placeholder="First name"
-                  onChange={handleChange}
-                  className="border w-full p-2 rounded-md"
-                  required
-                />
-
-                <input
-                  type="text"
-                  name="last_name"
-                  placeholder="Last name"
-                  onChange={handleChange}
-                  className="border w-full p-2 rounded-md"
-                  required
-                />
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    name="first_name"
+                    placeholder="First name"
+                    onChange={handleChange}
+                    className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    name="last_name"
+                    placeholder="Last name"
+                    onChange={handleChange}
+                    className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                    required
+                  />
+                </div>
               </div>
 
               <input
@@ -172,7 +179,7 @@ const SignUpForm = () => {
                 name="email"
                 placeholder="Email address"
                 onChange={handleChange}
-                className="border w-full p-2 rounded-md"
+                className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 required
               />
 
@@ -181,61 +188,63 @@ const SignUpForm = () => {
                 name="password"
                 placeholder="Password"
                 onChange={handleChange}
-                className="border w-full p-2 rounded-md"
+                className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 required
               />
 
-              <p className="text-sm text-gray-500">
+              <p className="text-xs text-[var(--color-text-muted)]">
                 Use 8+ characters with letters, numbers & symbols
               </p>
 
-              <div className="space-y-2 text-sm">
-                <label className="flex items-start gap-2">
+              <div className="text-xs space-y-3 text-[var(--color-text-muted)]">
+                <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     name="agreeTerms"
                     checked={formData.agreeTerms}
                     onChange={handleChange}
+                    className="mt-0.5 accent-[var(--color-primary)]"
                   />
                   <span>
                     I agree to the{" "}
-                    <a href="#" className="underline">Terms of use</a> and{" "}
-                    <a href="#" className="underline">Privacy Policy</a>.
+                    <a href="#" className="text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
+                      Terms of use
+                    </a>{" "}
+                    and{" "}
+                    <a href="#" className="text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
+                      Privacy Policy
+                    </a>.
                   </span>
                 </label>
 
-                <label className="flex items-start gap-2">
+                <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     name="agreeMarketing"
                     checked={formData.agreeMarketing}
                     onChange={handleChange}
+                    className="mt-0.5 accent-[var(--color-primary)]"
                   />
-                  <span>
-                    I agree to receive SMS and email promotions.
-                  </span>
+                  <span>I agree to receive updates and notifications.</span>
                 </label>
               </div>
 
-              <input type="hidden" name="role" value={formData.role} />
-
               <button
                 type="submit"
-                className="bg-gray-700 hover:bg-gray-800 text-white py-2 w-full rounded-md font-semibold"
+                className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-full font-semibold text-sm shadow-md transition-colors mt-2"
               >
-                Sign up
+                Create Account
               </button>
 
-              <p className="text-sm text-center mt-2">
+              <p className="text-sm text-center mt-4 text-[var(--color-text-main)]">
                 Already have an account?{" "}
                 <a
                   href={`/login?role=${role}`}
-                  className="underline text-blue-600"
+                  className="text-[var(--color-primary)] font-semibold hover:underline"
                 >
                   Log in
                 </a>
               </p>
-
             </form>
           </div>
         </div>

@@ -28,26 +28,26 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+    <nav className="fixed top-0 left-0 w-full bg-[var(--color-surface)] shadow-sm z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="bg-blue-600 text-white font-bold text-xl rounded-xl px-2 py-1">
+          <div className="bg-[var(--color-primary)] text-white font-bold text-xl rounded-xl px-2 py-1">
             H+
           </div>
-          <h1 className="text-xl font-semibold text-gray-800">MedConnect</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-main)] font-[var(--font-heading)]">MedConnect</h1>
         </div>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-6">
-          <Link to="/" className="text-gray-700 hover:text-blue-600">
+        <div className="hidden md:flex items-center gap-8">
+          <Link to="/" className="text-[var(--color-text-main)] hover:text-[var(--color-primary)] font-medium transition-colors">
             Home
           </Link>
-          <Link to="/find-doctor" className="text-gray-700 hover:text-blue-600">
+          <Link to="/find-doctor" className="text-[var(--color-text-main)] hover:text-[var(--color-primary)] font-medium transition-colors">
             Find Doctor
           </Link>
           <Link
             to="/patient-appointment"
-            className="text-gray-700 hover:text-blue-600"
+            className="text-[var(--color-text-main)] hover:text-[var(--color-primary)] font-medium transition-colors"
           >
             Appointment
           </Link>
@@ -58,7 +58,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <button
               onClick={handleLogout}
-              className="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
+              className="px-5 py-2.5 rounded-full bg-red-500 text-white hover:bg-red-600 font-medium transition-colors shadow-sm"
             >
               Logout
             </button>
@@ -66,13 +66,13 @@ const Navbar = () => {
             <>
               <Link
                 to="/login"
-                className="px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-100"
+                className="px-5 py-2.5 rounded-full border border-gray-200 text-[var(--color-text-main)] hover:bg-gray-50 font-medium transition-colors"
               >
                 Login
               </Link>
               <button
                 onClick={handleSignupClick}
-                className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                className="px-5 py-2.5 rounded-full bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] font-medium transition-colors shadow-md hover:shadow-lg"
               >
                 Sign Up
               </button>
@@ -82,7 +82,7 @@ const Navbar = () => {
 
         {/* Mobile Menu Button */}
         <div className="md:hidden">
-          <button onClick={() => setIsOpen(!isOpen)}>
+          <button onClick={() => setIsOpen(!isOpen)} className="text-[var(--color-text-main)]">
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
@@ -90,32 +90,32 @@ const Navbar = () => {
 
       {/* Mobile Dropdown Menu */}
       {isOpen && (
-        <div className="absolute top-full left-0 w-full bg-white shadow-md z-40 p-4 md:hidden">
-          <div className="space-y-3">
+        <div className="absolute top-full left-0 w-full bg-[var(--color-surface)] shadow-lg z-40 p-4 md:hidden border-t border-gray-100">
+          <div className="space-y-4">
             <Link
               to="/patient"
-              className="block text-gray-700 hover:text-blue-600"
+              className="block text-[var(--color-text-main)] hover:text-[var(--color-primary)] font-medium"
             >
               Home
             </Link>
             <Link
               to="/find-doctor"
-              className="block text-gray-700 hover:text-blue-600"
+              className="block text-[var(--color-text-main)] hover:text-[var(--color-primary)] font-medium"
             >
               Find Doctor
             </Link>
             <Link
               to="/patient-appointment"
-              className="text-gray-700 hover:text-blue-600"
+              className="block text-[var(--color-text-main)] hover:text-[var(--color-primary)] font-medium"
             >
               Appointment
             </Link>
 
-            <div className="flex flex-col gap-2 mt-3">
+            <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100">
               {isAuthenticated ? (
                 <button
                   onClick={handleLogout}
-                  className="w-full px-4 py-2 text-center rounded-md bg-red-500 text-white hover:bg-red-600"
+                  className="w-full px-4 py-3 text-center rounded-xl bg-red-500 text-white hover:bg-red-600 font-medium"
                 >
                   Logout
                 </button>
@@ -123,13 +123,13 @@ const Navbar = () => {
                 <>
                   <Link
                     to="/login"
-                    className="w-full px-4 py-2 text-center rounded-md border border-gray-300 hover:bg-gray-100"
+                    className="w-full px-4 py-3 text-center rounded-xl border border-gray-200 text-[var(--color-text-main)] hover:bg-gray-50 font-medium"
                   >
                     Login
                   </Link>
                   <button
                     onClick={handleSignupClick}
-                    className="w-full px-4 py-2 text-center rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                    className="w-full px-4 py-3 text-center rounded-xl bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] font-medium shadow-md"
                   >
                     Sign Up
                   </button>
