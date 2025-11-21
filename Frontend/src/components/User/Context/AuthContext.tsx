@@ -17,7 +17,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return localStorage.getItem("isAuthenticated") === "true";
   });
 
-  const login = (data: any) => {
+  const login = (_data: any) => {
     setIsAuthenticated(true);
     localStorage.setItem("isAuthenticated", "true");
     // You might want to store user data here if needed

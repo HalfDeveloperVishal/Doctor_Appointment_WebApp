@@ -1,7 +1,14 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+
+interface Stats {
+  total_appointments: number;
+  upcoming_appointments: number;
+  total_patients_seen: number;
+  average_rating: number;
+}
 
 export const Appointment_info_card = () => {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     total_appointments: 0,
     upcoming_appointments: 0,
     total_patients_seen: 0,
@@ -20,7 +27,7 @@ export const Appointment_info_card = () => {
 
         if (!response.ok) throw new Error("Failed to fetch appointment stats");
 
-        const data = await response.json();
+        const data: Stats = await response.json();
         setStats(data);
       } catch (error) {
         console.error("Error fetching appointment stats:", error);

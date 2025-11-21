@@ -1,15 +1,34 @@
-// DoctorBookingsPage.jsx
+// DoctorBookingsPage.tsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const DoctorBookingsPage = () => {
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+interface PatientInfo {
+  full_name: string;
+  phone_number?: string;
+  email?: string;
+  date_of_birth?: string;
+  reason_to_visit?: string;
+  symptoms_or_concerns?: string;
+}
 
-  const [showToday, setShowToday] = useState(true);
-  const [showUpcoming, setShowUpcoming] = useState(false);
+interface Booking {
+  id: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  is_rejected: boolean;
+  patient_full_name?: string;
+  patient_info?: PatientInfo;
+}
+
+const DoctorBookingsPage: React.FC = () => {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const [showToday, setShowToday] = useState<boolean>(true);
+  const [showUpcoming, setShowUpcoming] = useState<boolean>(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -33,7 +52,7 @@ const DoctorBookingsPage = () => {
   }, []);
 
   const filteredBookings = bookings.filter((booking) => {
-    const patient = booking.patient_info || {};
+    const patient = booking.patient_info || {} as PatientInfo;
     const fullName = patient.full_name || booking.patient_full_name || "";
     return fullName.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -48,7 +67,7 @@ const DoctorBookingsPage = () => {
     return date > todayStr;
   });
 
-  const handleReject = async (bookingId) => {
+  const handleReject = async (bookingId: number) => {
     const reason = prompt("Enter rejection reason (optional):") || "";
 
     try {
@@ -131,8 +150,18 @@ const DoctorBookingsPage = () => {
 
 export default DoctorBookingsPage;
 
-const TableSection = ({ bookings, handleReject }) => {
-  const [sortConfig, setSortConfig] = useState({
+interface TableSectionProps {
+  bookings: Booking[];
+  handleReject: (id: number) => void;
+}
+
+interface SortConfig {
+  key: "date" | null;
+  direction: "asc" | "desc";
+}
+
+const TableSection: React.FC<TableSectionProps> = ({ bookings, handleReject }) => {
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
     direction: "asc",
   });
@@ -187,7 +216,7 @@ const TableSection = ({ bookings, handleReject }) => {
 
         <tbody>
           {sortedBookings.map((booking) => {
-            const p = booking.patient_info || {};
+            const p = booking.patient_info || {} as PatientInfo;
 
             return (
               <tr key={booking.id} className="hover:bg-gray-50">

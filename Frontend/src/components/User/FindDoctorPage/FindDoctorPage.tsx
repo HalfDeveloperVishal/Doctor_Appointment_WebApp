@@ -1,4 +1,3 @@
-import React from 'react'
 import FindDoctorBanner from './FindDocBanner'
 import Navbar from '../HomePage/Navbar'
 // import DoctorFilterBar from './DoctorFilterBar'

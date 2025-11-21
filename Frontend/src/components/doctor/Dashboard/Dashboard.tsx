@@ -1,4 +1,3 @@
-import React from 'react'
 import WelcomeHeader from './WelcomeHeader'
 import { Appointment_info_card } from './Appointment_info_card'
 import  UpcomingAppointments  from './UpcomingAppointments'

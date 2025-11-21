@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -7,21 +7,41 @@ import {
   MdEmail,
   MdCall,
   MdLocationOn,
-  MdAttachMoney,
   MdStar,
   MdCameraAlt,
 } from "react-icons/md";
 import { BadgeIndianRupee } from "lucide-react";
 
+interface DoctorProfile {
+  full_name: string;
+  email: string;
+  phone_number: string;
+  clinic_name: string;
+  years_of_experience: number;
+  consultation_fee: number;
+  specialization: string;
+  specialization_display?: string;
+  bio: string;
+  profile_photo?: string | null;
+  is_accepting_appointments: boolean;
+  working_days: string[];
+  start_time: string;
+  end_time: string;
+  appointment_duration: number;
+  qualifications: string;
+  total_patients?: number;
+  [key: string]: any;
+}
+
 const DoctorProfileView = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [editedProfile, setEditedProfile] = useState(null);
+  const [profile, setProfile] = useState<DoctorProfile | null>(null);
+  const [editedProfile, setEditedProfile] = useState<DoctorProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAvailabilityEditing, setIsAvailabilityEditing] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const durationOptions = [15, 30, 45, 60];
 
@@ -32,7 +52,7 @@ const DoctorProfileView = () => {
     { value: "orthopedics", label: "Orthopedics" },
   ];
 
-  const formatFee = (fee) => {
+  const formatFee = (fee: number | undefined) => {
     if (!fee) return "N/A";
     return Number(fee).toLocaleString("en-IN");
   };
@@ -56,7 +76,7 @@ const DoctorProfileView = () => {
             { refresh: refreshToken }
           );
           token = res.data.access;
-          localStorage.setItem("access_token", token);
+          localStorage.setItem("access_token", token || "");
           toast.info("Session token refreshed successfully.");
         } catch {
           toast.error("Session expired. Please log in again.");
@@ -76,7 +96,7 @@ const DoctorProfileView = () => {
         );
         setProfile(res.data);
         setEditedProfile({ ...res.data, is_accepting_appointments: true });
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
         setError(err.response?.data?.detail || "Failed to load profile.");
       } finally {
@@ -90,19 +110,22 @@ const DoctorProfileView = () => {
   // Handlers
   const handleEdit = () => setIsEditing(true);
   const handleCancel = () => {
-    setEditedProfile({ ...profile, is_accepting_appointments: true });
+    if (profile) {
+      setEditedProfile({ ...profile, is_accepting_appointments: true });
+    }
     setIsEditing(false);
     setIsAvailabilityEditing(false);
     setSelectedFile(null);
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setEditedProfile((prev) => ({ ...prev, [name]: value }));
+    setEditedProfile((prev) => prev ? ({ ...prev, [name]: value }) : null);
   };
 
-  const handleDayChange = (day) => {
+  const handleDayChange = (day: string) => {
     setEditedProfile((prev) => {
+      if (!prev) return null;
       let working_days = [...(prev.working_days || [])];
       if (working_days.includes(day))
         working_days = working_days.filter((d) => d !== day);
@@ -112,9 +135,10 @@ const DoctorProfileView = () => {
   };
 
   const handleSaveProfile = async () => {
+    if (!editedProfile) return;
     let token = localStorage.getItem("access_token");
 
-    const formatTime = (t) => (t?.length === 5 ? `${t}:00` : t);
+    const formatTime = (t: string) => (t?.length === 5 ? `${t}:00` : t);
     const payload = {
       ...editedProfile,
       years_of_experience: Number(editedProfile.years_of_experience),
@@ -126,7 +150,9 @@ const DoctorProfileView = () => {
     };
 
     // Remove the profile photo from the payload
-    delete payload.profile_photo;
+    if ('profile_photo' in payload) {
+      delete payload.profile_photo;
+    }
 
     try {
       const response = await axios.put(
@@ -145,7 +171,7 @@ const DoctorProfileView = () => {
       setIsEditing(false);
       setIsAvailabilityEditing(false);
       toast.success("Profile updated successfully.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Save error:", err.response?.data || err.message);
       const errorMessage =
         err.response?.data?.detail ||
@@ -156,15 +182,15 @@ const DoctorProfileView = () => {
     }
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       await handleSavePhoto(file);
     }
   };
 
-  const handleSavePhoto = async (file) => {
+  const handleSavePhoto = async (file: File) => {
     let token = localStorage.getItem("access_token");
     const formData = new FormData();
     formData.append("profile_photo", file);
@@ -185,7 +211,7 @@ const DoctorProfileView = () => {
       setEditedProfile({ ...response.data, is_accepting_appointments: true });
       setSelectedFile(null);
       toast.success("Profile photo updated successfully.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Photo save error:", err.response?.data || err.message);
       toast.error("Failed to update profile photo.");
     }
@@ -225,6 +251,8 @@ const DoctorProfileView = () => {
       </div>
     );
 
+  if (!editedProfile) return null;
+
   return (
     <div className="min-h-screen p-6 font-sans">
       <div className="flex flex-col lg:flex-row gap-6">
@@ -238,7 +266,7 @@ const DoctorProfileView = () => {
                     selectedFile
                       ? URL.createObjectURL(selectedFile)
                       : editedProfile.profile_photo ||
-                        "https://via.placeholder.com/150"
+                      "https://via.placeholder.com/150"
                   }
                   alt="Avatar"
                   className="w-24 h-24 rounded-full mb-2 object-cover"
@@ -264,7 +292,7 @@ const DoctorProfileView = () => {
               <p className="text-gray-600">
                 {editedProfile.specialization_display ||
                   editedProfile.specialization?.charAt(0).toUpperCase() +
-                    editedProfile.specialization?.slice(1) ||
+                  editedProfile.specialization?.slice(1) ||
                   "N/A"}
               </p>
               <div className="flex items-center gap-1 mt-1">
@@ -366,9 +394,8 @@ const DoctorProfileView = () => {
                     value={editedProfile[field.name] || ""}
                     readOnly={!isEditing || field.readonly}
                     onChange={handleChange}
-                    className={`w-full p-2 border border-gray-200 rounded ${
-                      !isEditing || field.readonly ? "bg-gray-50" : ""
-                    }`}
+                    className={`w-full p-2 border border-gray-200 rounded ${!isEditing || field.readonly ? "bg-gray-50" : ""
+                      }`}
                   />
                 </div>
               ))}
@@ -382,9 +409,8 @@ const DoctorProfileView = () => {
                   value={editedProfile.specialization || ""}
                   onChange={handleChange}
                   disabled={!isEditing}
-                  className={`w-full p-2 border border-gray-200 rounded ${
-                    !isEditing ? "bg-gray-50" : ""
-                  }`}
+                  className={`w-full p-2 border border-gray-200 rounded ${!isEditing ? "bg-gray-50" : ""
+                    }`}
                 >
                   {specializations.map((spec) => (
                     <option key={spec.value} value={spec.value}>
@@ -404,9 +430,8 @@ const DoctorProfileView = () => {
                 value={editedProfile.bio || ""}
                 onChange={handleChange}
                 readOnly={!isEditing}
-                className={`w-full p-2 border border-gray-200 rounded min-h-[100px] ${
-                  !isEditing ? "bg-gray-50" : ""
-                }`}
+                className={`w-full p-2 border border-gray-200 rounded min-h-[100px] ${!isEditing ? "bg-gray-50" : ""
+                  }`}
               />
             </div>
 
@@ -448,11 +473,10 @@ const DoctorProfileView = () => {
                 <span
                   className={`absolute top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full transition-colors
                 before:absolute before:h-4 before:w-4 before:left-1 before:bottom-1 before:bg-white before:rounded-full before:transition-transform
-                ${
-                  editedProfile.is_accepting_appointments
-                    ? "bg-blue-500 before:translate-x-6"
-                    : ""
-                }`}
+                ${editedProfile.is_accepting_appointments
+                      ? "bg-blue-500 before:translate-x-6"
+                      : ""
+                    }`}
                 ></span>
               </label>
             </div>
@@ -486,11 +510,10 @@ const DoctorProfileView = () => {
                   ) : (
                     <span
                       key={day}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        isSelected
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-sm ${isSelected
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-500"
+                        }`}
                     >
                       {day}
                     </span>
@@ -513,9 +536,8 @@ const DoctorProfileView = () => {
                     value={editedProfile[field] || ""}
                     onChange={handleChange}
                     readOnly={!isAvailabilityEditing}
-                    className={`w-full p-2 border border-gray-200 rounded ${
-                      !isAvailabilityEditing ? "bg-gray-50" : ""
-                    }`}
+                    className={`w-full p-2 border border-gray-200 rounded ${!isAvailabilityEditing ? "bg-gray-50" : ""
+                      }`}
                   />
                 </div>
               ))}
@@ -529,9 +551,8 @@ const DoctorProfileView = () => {
                   value={editedProfile.appointment_duration || ""}
                   onChange={handleChange}
                   disabled={!isAvailabilityEditing}
-                  className={`w-full p-2 border border-gray-200 rounded ${
-                    !isAvailabilityEditing ? "bg-gray-50" : ""
-                  }`}
+                  className={`w-full p-2 border border-gray-200 rounded ${!isAvailabilityEditing ? "bg-gray-50" : ""
+                    }`}
                 >
                   {durationOptions.map((opt) => (
                     <option key={opt} value={opt}>
@@ -576,7 +597,7 @@ const DoctorProfileView = () => {
             ) : (
               <div className="flex flex-wrap gap-2">
                 {editedProfile.qualifications ? (
-                  editedProfile.qualifications.split(",").map((q, idx) => (
+                  editedProfile.qualifications.split(",").map((q: string, idx: number) => (
                     <span
                       key={idx}
                       className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"

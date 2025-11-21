@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { Settings, LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function WelcomeHeader() {
   const [doctorName, setDoctorName] = useState('');
@@ -31,7 +30,7 @@ export default function WelcomeHeader() {
   }, []);
 
   // Generate initials from doctor name
-  const getInitials = (name) => {
+  const getInitials = (name: string) => {
     return name
       .split(" ")
       .map((n) => n[0])

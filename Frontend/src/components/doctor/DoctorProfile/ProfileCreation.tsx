@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, ChangeEvent, FormEvent } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -23,9 +23,30 @@ const DAYS_OF_WEEK = [
   { value: "sunday", label: "Sunday" },
 ];
 
+interface ProfileData {
+  phone_number: string;
+  specialization: string;
+  years_of_experience: string;
+  consultation_fee: string;
+  qualifications: string;
+  clinic_name: string;
+  address: string;
+  working_days: string[];
+  start_time: string;
+  end_time: string;
+  appointment_duration: string;
+  bio: string;
+  profile_photo: File | null;
+  [key: string]: any;
+}
+
+interface FormErrors {
+  [key: string]: string | null | undefined;
+}
+
 export default function DoctorProfileForm() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProfileData>({
     phone_number: "",
     specialization: "",
     years_of_experience: "",
@@ -41,19 +62,21 @@ export default function DoctorProfileForm() {
     profile_photo: null,
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  const handleChange = (e) => {
-    const { name, value, type, files } = e.target;
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const files = (e.target as HTMLInputElement).files;
+
     setErrors((prev) => ({ ...prev, [name]: null }));
-    if (type === "file") {
+    if (type === "file" && files) {
       setFormData({ ...formData, [name]: files[0] });
     } else {
       setFormData({ ...formData, [name]: value });
     }
   };
 
-  const handleWorkingDays = (day) => {
+  const handleWorkingDays = (day: string) => {
     const updatedDays = formData.working_days.includes(day)
       ? formData.working_days.filter((d) => d !== day)
       : [...formData.working_days, day];
@@ -62,7 +85,7 @@ export default function DoctorProfileForm() {
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: FormErrors = {};
     if (formData.working_days.length === 0) {
       newErrors.working_days = "Please select at least one working day";
     }
@@ -73,7 +96,7 @@ export default function DoctorProfileForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const refreshAccessToken = async (refreshToken) => {
+  const refreshAccessToken = async (refreshToken: string) => {
     try {
       const res = await axios.post(`${API_URL}/api/token/refresh/`, { refresh: refreshToken });
       const newToken = res.data.access;
@@ -86,7 +109,7 @@ export default function DoctorProfileForm() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
       toast.error("Please fix the form errors");
@@ -119,11 +142,11 @@ export default function DoctorProfileForm() {
     for (const key in formData) {
       const value = formData[key];
       if (key === "working_days") {
-        value.forEach((day) => data.append(key, day)); // send each day individually
+        (value as string[]).forEach((day) => data.append(key, day)); // send each day individually
       } else if (key === "profile_photo" && value instanceof File) {
         data.append(key, value);
       } else if (value !== null && value !== "") {
-        data.append(key, value);
+        data.append(key, value as string);
       }
     }
 
@@ -134,7 +157,7 @@ export default function DoctorProfileForm() {
       });
       toast.success("Doctor profile created successfully!");
       navigate("/doctor-dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating profile:", error.response?.data || error);
       if (error.response?.status === 401 && refreshToken) {
         try {
@@ -159,7 +182,7 @@ export default function DoctorProfileForm() {
           setErrors(errorData);
           const firstError = Object.values(errorData)[0];
           const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
-          toast.error(errorMessage || "Failed to create profile");
+          toast.error((errorMessage as string) || "Failed to create profile");
         } else {
           toast.error(errorData.detail || "Failed to create profile");
         }
@@ -185,9 +208,8 @@ export default function DoctorProfileForm() {
             placeholder="+1 234 567 8900"
             value={formData.phone_number}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.phone_number ? "border-red-500" : "border-gray-300"
-            }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.phone_number ? "border-red-500" : "border-gray-300"
+              }`}
             required
           />
           {errors.phone_number && <p className="text-red-500 text-sm mt-1">{errors.phone_number}</p>}
@@ -200,9 +222,8 @@ export default function DoctorProfileForm() {
             name="specialization"
             value={formData.specialization}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.specialization ? "border-red-500" : "border-gray-300"
-            }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.specialization ? "border-red-500" : "border-gray-300"
+              }`}
             required
           >
             <option value="">Select Specialization</option>
@@ -225,9 +246,8 @@ export default function DoctorProfileForm() {
               placeholder="5"
               value={formData.years_of_experience}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.years_of_experience ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.years_of_experience ? "border-red-500" : "border-gray-300"
+                }`}
               min="0"
               required
             />
@@ -243,9 +263,8 @@ export default function DoctorProfileForm() {
               placeholder="100.00"
               value={formData.consultation_fee}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.consultation_fee ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.consultation_fee ? "border-red-500" : "border-gray-300"
+                }`}
               min="0"
               required
             />
@@ -261,10 +280,9 @@ export default function DoctorProfileForm() {
             placeholder="MD, MBBS, Board Certified..."
             value={formData.qualifications}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.qualifications ? "border-red-500" : "border-gray-300"
-            }`}
-            rows="3"
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.qualifications ? "border-red-500" : "border-gray-300"
+              }`}
+            rows={3}
             required
           />
           {errors.qualifications && <p className="text-red-500 text-sm mt-1">{errors.qualifications}</p>}
@@ -279,9 +297,8 @@ export default function DoctorProfileForm() {
             placeholder="City Medical Center"
             value={formData.clinic_name}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.clinic_name ? "border-red-500" : "border-gray-300"
-            }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.clinic_name ? "border-red-500" : "border-gray-300"
+              }`}
             required
           />
           {errors.clinic_name && <p className="text-red-500 text-sm mt-1">{errors.clinic_name}</p>}
@@ -295,10 +312,9 @@ export default function DoctorProfileForm() {
             placeholder="123 Main St, Suite 100, City, State, ZIP"
             value={formData.address}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.address ? "border-red-500" : "border-gray-300"
-            }`}
-            rows="3"
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.address ? "border-red-500" : "border-gray-300"
+              }`}
+            rows={3}
             required
           />
           {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
@@ -311,11 +327,10 @@ export default function DoctorProfileForm() {
             {DAYS_OF_WEEK.map((day) => (
               <label
                 key={day.value}
-                className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                  formData.working_days.includes(day.value)
+                className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer transition-colors ${formData.working_days.includes(day.value)
                     ? "bg-blue-50 border-blue-500"
                     : "bg-white border-gray-300 hover:bg-gray-50"
-                }`}
+                  }`}
               >
                 <input
                   type="checkbox"
@@ -339,9 +354,8 @@ export default function DoctorProfileForm() {
               name="start_time"
               value={formData.start_time}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.start_time ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.start_time ? "border-red-500" : "border-gray-300"
+                }`}
               required
             />
             {errors.start_time && <p className="text-red-500 text-sm mt-1">{errors.start_time}</p>}
@@ -354,9 +368,8 @@ export default function DoctorProfileForm() {
               name="end_time"
               value={formData.end_time}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.end_time ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.end_time ? "border-red-500" : "border-gray-300"
+                }`}
               required
             />
             {errors.end_time && <p className="text-red-500 text-sm mt-1">{errors.end_time}</p>}
@@ -374,9 +387,8 @@ export default function DoctorProfileForm() {
             placeholder="30"
             value={formData.appointment_duration}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.appointment_duration ? "border-red-500" : "border-gray-300"
-            }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.appointment_duration ? "border-red-500" : "border-gray-300"
+              }`}
             min="5"
             step="5"
             required
@@ -395,7 +407,7 @@ export default function DoctorProfileForm() {
             value={formData.bio}
             onChange={handleChange}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows="4"
+            rows={4}
           />
         </div>
 

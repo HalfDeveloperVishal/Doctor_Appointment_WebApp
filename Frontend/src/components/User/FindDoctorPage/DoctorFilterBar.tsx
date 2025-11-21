@@ -1,7 +1,12 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-export default function DoctorFilterBar({ specialty, setSpecialty }) {
-  const [specialties, setSpecialties] = useState([]);
+interface DoctorFilterBarProps {
+  specialty: string;
+  setSpecialty: (specialty: string) => void;
+}
+
+export default function DoctorFilterBar({ specialty, setSpecialty }: DoctorFilterBarProps) {
+  const [specialties, setSpecialties] = useState<string[]>([]);
 
   useEffect(() => {
     // You can fetch this dynamically from API if needed

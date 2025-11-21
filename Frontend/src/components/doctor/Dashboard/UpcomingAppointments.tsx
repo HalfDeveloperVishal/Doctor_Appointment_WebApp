@@ -1,12 +1,21 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
 
+import { ColumnDef } from "@tanstack/react-table";
+
+interface Appointment {
+  patient_full_name: string;
+  date: string;
+  slot_time: string;
+  reason_to_visit: string;
+}
+
 export default function UpcomingAppointments() {
-  const [appointments, setAppointments] = useState([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -23,7 +32,7 @@ export default function UpcomingAppointments() {
         const data = await response.json();
 
         // Format data for table display
-        const formatted = data.map((item) => ({
+        const formatted: Appointment[] = data.map((item: any) => ({
           patient_full_name: item.patient_info.full_name || "N/A",
           date: item.date,
           slot_time: `${item.start_time.slice(0, 5)} - ${item.end_time.slice(0, 5)}`,
@@ -38,8 +47,8 @@ export default function UpcomingAppointments() {
 
     fetchAppointments();
   }, []);
-  
-  const columns = [
+
+  const columns: ColumnDef<Appointment>[] = [
     { header: "Patient", accessorKey: "patient_full_name" },
     { header: "Date", accessorKey: "date" },
     { header: "Slot", accessorKey: "slot_time" },

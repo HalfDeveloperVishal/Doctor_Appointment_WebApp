@@ -1,25 +1,57 @@
-// PatientAppointmentsPage.jsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import Navbar from "../HomePage/Navbar";
 import Chatbot from "../../Chatbot/Chatbot";
 
-const PatientAppointmentsPage = () => {
-  const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+// ============================================
+// INTERFACES
+// ============================================
+interface PatientInfo {
+  full_name?: string;
+  reason_to_visit?: string;
+  symptoms_or_concerns?: string;
+}
 
-  const [showToday, setShowToday] = useState(true);
-  const [showUpcoming, setShowUpcoming] = useState(false);
+interface Appointment {
+  id: number;
+  doctor_name: string;
+  specialization: string;
+  clinic_name: string;
+  address: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  created_at: string;
+  payment_method: "online" | "counter";
+  is_rejected: boolean;
+  patient_info?: PatientInfo;
+}
+
+type SortKey = "date" | "patient_name" | "created_at";
+
+interface SortConfig {
+  key: SortKey | null;
+  direction: "asc" | "desc";
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+const PatientAppointmentsPage = () => {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const [showToday, setShowToday] = useState<boolean>(true);
+  const [showUpcoming, setShowUpcoming] = useState<boolean>(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
-  
 
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const res = await axios.get(
+        const res = await axios.get<Appointment[]>(
           "http://localhost:8000/patient/patient-appointment/",
           {
             headers: {
@@ -89,7 +121,7 @@ const PatientAppointmentsPage = () => {
           </button>
 
           {showToday && (
-            <TableSection appointments={todaysAppointments} type="today" />
+            <TableSection appointments={todaysAppointments} />
           )}
 
           {showToday && todaysAppointments.length === 0 && (
@@ -108,10 +140,7 @@ const PatientAppointmentsPage = () => {
           </button>
 
           {showUpcoming && (
-            <TableSection
-              appointments={upcomingAppointments}
-              type="upcoming"
-            />
+            <TableSection appointments={upcomingAppointments} />
           )}
 
           {showUpcoming && upcomingAppointments.length === 0 && (
@@ -133,8 +162,12 @@ export default PatientAppointmentsPage;
 // ============================================
 // TABLE SECTION COMPONENT
 // ============================================
-const TableSection = ({ appointments }) => {
-  const [sortConfig, setSortConfig] = useState({
+interface TableSectionProps {
+  appointments: Appointment[];
+}
+
+const TableSection = ({ appointments }: TableSectionProps) => {
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
     direction: "asc",
   });
@@ -146,7 +179,8 @@ const TableSection = ({ appointments }) => {
     if (!sortConfig.key) return 0;
     const key = sortConfig.key;
 
-    let valA, valB;
+    let valA: string | Date;
+    let valB: string | Date;
 
     if (key === "patient_name") {
       valA = a.patient_info?.full_name || "";
@@ -168,7 +202,7 @@ const TableSection = ({ appointments }) => {
   });
 
   // Handle click on sortable column
-  const handleSort = (key) => {
+  const handleSort = (key: SortKey): void => {
     setSortConfig((prev) => ({
       key,
       direction:
@@ -177,39 +211,40 @@ const TableSection = ({ appointments }) => {
   };
 
   // Sorting icon helper
-  const sortIcon = (key) => {
+  const sortIcon = (key: SortKey): string => {
     if (sortConfig.key !== key) return "↕";
     return sortConfig.direction === "asc" ? "▲" : "▼";
   };
 
   // ---------- STATUS BADGE ----------
-  const getStatusBadge = (isRejected) => {
+  const getStatusBadge = (isRejected: boolean): string => {
     const base = "px-3 py-1 text-xs font-semibold rounded-full";
     return isRejected
       ? base + " bg-red-100 text-red-700"
       : base + " bg-green-100 text-green-700";
   };
 
-  const getStatusText = (a) => (a.is_rejected ? "Rejected" : "Accepted");
+  const getStatusText = (appointment: Appointment): string =>
+    appointment.is_rejected ? "Rejected" : "Accepted";
 
   // ---------- PAYMENT METHOD BADGE ----------
-  const getPaymentMethodBadge = (paymentMethod) => {
+  const getPaymentMethodBadge = (paymentMethod: string): string => {
     const base = "px-3 py-1 text-xs font-semibold rounded-full";
     return paymentMethod === "online"
       ? base + " bg-blue-100 text-blue-700"
       : base + " bg-purple-100 text-purple-700";
   };
 
-  const getPaymentMethodText = (method) => {
+  const getPaymentMethodText = (method: string): string => {
     return method === "online" ? "Paid Online" : "Pay at Counter";
   };
 
-  const formatDateTime = (dateTimeString) => {
+  const formatDateTime = (dateTimeString: string | null | undefined): string => {
     if (!dateTimeString) return "N/A";
 
     const dateObj = new Date(dateTimeString);
 
-    const date = dateObj.toISOString().split("T")[0]; // YYYY-MM-DD
+    const date = dateObj.toISOString().split("T")[0];
     const time = dateObj.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -257,9 +292,7 @@ const TableSection = ({ appointments }) => {
               Booked On {sortIcon("created_at")}
             </th>
 
-            {/* ✅ NEW: PAYMENT METHOD COLUMN */}
             <th className="border p-3">Payment Method</th>
-            
             <th className="border p-3">Status</th>
           </tr>
         </thead>

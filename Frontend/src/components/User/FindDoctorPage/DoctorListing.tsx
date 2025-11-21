@@ -1,26 +1,38 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, Star, BadgeIndianRupee } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const debounce = (func, delay) => {
-  let timer;
-  return (...args) => {
+interface Doctor {
+  id: number;
+  full_name: string;
+  specialization_display: string;
+  years_of_experience: number;
+  rating?: number;
+  reviews_count?: number;
+  address: string;
+  consultation_fee: number;
+  profile_photo_url?: string;
+}
+
+const debounce = <T extends (...args: any[]) => void>(func: T, delay: number) => {
+  let timer: number | undefined;
+  return (...args: Parameters<T>) => {
     clearTimeout(timer);
-    timer = setTimeout(() => func(...args), delay);
+    timer = setTimeout(() => func(...args), delay) as unknown as number;
   };
 };
 
 const DoctorPage = () => {
-  const [specialty, setSpecialty] = useState("All Specialties");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [specialties, setSpecialties] = useState([]);
-  const [doctors, setDoctors] = useState([]);
-  const [error, setError] = useState("");
+  const [specialty, setSpecialty] = useState<string>("All Specialties");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [specialties, setSpecialties] = useState<string[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [error, setError] = useState<string>("");
 
   const navigate = useNavigate();
 
-  const formatFee = (fee) => {
+  const formatFee = (fee: number | string) => {
     if (!fee) return "N/A";
     return Number(fee).toLocaleString("en-IN");
   };
@@ -37,7 +49,7 @@ const DoctorPage = () => {
   }, []);
 
   // Fetch doctors from backend (no auth required)
-  const fetchDoctors = async (search = searchQuery, spec = specialty) => {
+  const fetchDoctors = async (search: string = searchQuery, spec: string = specialty) => {
     try {
       let url = "http://localhost:8000/patient/doctor_listing/";
       const params = [];
@@ -65,7 +77,7 @@ const DoctorPage = () => {
   }, [searchQuery, specialty]);
 
   // Handle "Book Now" click
-  const handleBookNow = (doctorId) => {
+  const handleBookNow = (doctorId: number) => {
     const token = localStorage.getItem("access_token");
 
     if (!token) {

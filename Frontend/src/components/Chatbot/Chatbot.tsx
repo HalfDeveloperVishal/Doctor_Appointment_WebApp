@@ -12,7 +12,7 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const messagesEndRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll function
   const scrollToBottom = () => {
@@ -49,7 +49,7 @@ export default function Chatbot() {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleSend();
   };
 
@@ -96,9 +96,8 @@ export default function Chatbot() {
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-2 ${
-                  msg.sender === "user" ? "justify-end" : "justify-start"
-                }`}
+                className={`flex items-start gap-2 ${msg.sender === "user" ? "justify-end" : "justify-start"
+                  }`}
               >
                 {/* Bot Avatar */}
                 {msg.sender === "bot" && (
@@ -111,11 +110,10 @@ export default function Chatbot() {
 
                 {/* Message Bubble */}
                 <div
-                  className={`px-4 py-2 rounded-xl max-w-[70%] text-sm ${
-                    msg.sender === "user"
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-200 text-gray-800"
-                  }`}
+                  className={`px-4 py-2 rounded-xl max-w-[70%] text-sm ${msg.sender === "user"
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-200 text-gray-800"
+                    }`}
                 >
                   {msg.text}
                 </div>

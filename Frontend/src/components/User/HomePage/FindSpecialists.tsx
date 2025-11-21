@@ -1,4 +1,3 @@
-import React from 'react';
 import { HeartPulse } from 'lucide-react';
 
 const specialties = [

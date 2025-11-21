@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../User/Context/AuthContext";
 import { toast } from "react-toastify";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
@@ -8,14 +8,13 @@ import "react-toastify/dist/ReactToastify.css";
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [isLoading, setIsLoading] = useState(false);
 
-  const params = new URLSearchParams(location.search);
-  const roleParam = params.get("role");
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));

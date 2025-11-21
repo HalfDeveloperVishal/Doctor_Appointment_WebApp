@@ -1,23 +1,29 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+interface DoctorProfile {
+  full_name: string;
+  specialization: string;
+  [key: string]: any;
+}
+
 const DoctorNavbar = () => {
   const [hasProfile, setHasProfile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState<DoctorProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     const checkProfile = async () => {
       let token = localStorage.getItem("access_token");
-      const refreshToken = localStorage.getItem("refresh_token");
+
 
       if (!token) {
         setIsAuthenticated(false);
@@ -34,7 +40,7 @@ const DoctorNavbar = () => {
         );
         setHasProfile(res.data.has_profile);
         setIsAuthenticated(true);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error checking profile:", error.response?.data || error);
         setIsAuthenticated(false);
       }
@@ -48,7 +54,7 @@ const DoctorNavbar = () => {
           }
         );
         setProfile(profileRes.data);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching profile:", error.response?.data || error);
       }
     };
@@ -75,9 +81,8 @@ const DoctorNavbar = () => {
     <>
       {/* Sidebar (mobile) */}
       <div
-        className={`bg-white shadow-lg w-64 fixed top-0 left-0 h-screen transition-transform duration-300 z-50 md:hidden ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`bg-white shadow-lg w-64 fixed top-0 left-0 h-screen transition-transform duration-300 z-50 md:hidden ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <button
           onClick={() => setIsSidebarOpen(false)}
@@ -102,11 +107,10 @@ const DoctorNavbar = () => {
                   <li key={item.name} className="mb-1">
                     <Link
                       to={item.path}
-                      className={`flex items-center px-4 py-3 rounded-lg ${
-                        isActive(item.path)
-                          ? "bg-blue-100 text-blue-600"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
+                      className={`flex items-center px-4 py-3 rounded-lg ${isActive(item.path)
+                        ? "bg-blue-100 text-blue-600"
+                        : "text-gray-700 hover:bg-gray-100"
+                        }`}
                       onClick={() => setIsSidebarOpen(false)}
                     >
                       {item.name}
@@ -156,38 +160,34 @@ const DoctorNavbar = () => {
               {!hasProfile && (
                 <Link
                   to="/doctor-profile-create"
-                  className={`text-gray-600 hover:text-blue-600 ${
-                    isActive("/doctor-profile-create") ? "font-semibold text-blue-600" : ""
-                  }`}
+                  className={`text-gray-600 hover:text-blue-600 ${isActive("/doctor-profile-create") ? "font-semibold text-blue-600" : ""
+                    }`}
                 >
                   Register Yourself
                 </Link>
               )}
               <Link
                 to="/doctor-dashboard"
-                className={`text-gray-600 hover:text-blue-600 ${
-                  isActive("/doctor-dashboard") ? "font-semibold text-blue-600" : ""
-                }`}
+                className={`text-gray-600 hover:text-blue-600 ${isActive("/doctor-dashboard") ? "font-semibold text-blue-600" : ""
+                  }`}
               >
                 Dashboard
               </Link>
               <Link
                 to="/doctor-profile"
-                className={`text-gray-600 hover:text-blue-600 ${
-                  isActive("/doctor-profile") ? "font-semibold text-blue-600" : ""
-                }`}
+                className={`text-gray-600 hover:text-blue-600 ${isActive("/doctor-profile") ? "font-semibold text-blue-600" : ""
+                  }`}
               >
                 Profile
               </Link>
               <Link
                 to="/appointment-info"
-                className={`text-gray-600 hover:text-blue-600 ${
-                  isActive("/appointment-info") ? "font-semibold text-blue-600" : ""
-                }`}
+                className={`text-gray-600 hover:text-blue-600 ${isActive("/appointment-info") ? "font-semibold text-blue-600" : ""
+                  }`}
               >
                 Appointments
               </Link>
-              
+
             </>
           )}
         </div>
