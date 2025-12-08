@@ -40,14 +40,13 @@ class DoctorListView(generics.ListAPIView):
 
         return queryset
 
-# patient/views.py
-# patient/views.py
+
 class BookSlotView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request, doctor_id):
-        # 1️⃣ Get doctor
+
         try:
             doctor = DoctorProfile.objects.get(id=doctor_id)
         except DoctorProfile.DoesNotExist:
@@ -66,7 +65,8 @@ class BookSlotView(APIView):
         payment_method = request.data.get('payment_method', 'counter')
 
         # 3️⃣ Validate fields
-        if not all([date_str, start_time_str, end_time_str, full_name, phone_number, date_of_birth]):
+        required = [date_str, start_time_str, end_time_str, full_name, phone_number, date_of_birth]
+        if not all(required):
             return Response({"error": "Missing required fields"}, status=400)
 
         try:
@@ -80,35 +80,52 @@ class BookSlotView(APIView):
         # 4️⃣ Check slot availability
         if Booking.objects.filter(doctor=doctor, patient=request.user, date=date_obj).exists():
             return Response({"error": "You already have an appointment with this doctor on this date"}, status=400)
+
         if Booking.objects.filter(doctor=doctor, date=date_obj, start_time=start_time_obj).exists():
             return Response({"error": "This slot is already booked"}, status=400)
 
-        # 5️⃣ Create booking
-        booking = Booking.objects.create(
-            doctor=doctor,
-            patient=request.user,
-            date=date_obj,
-            start_time=start_time_obj,
-            end_time=end_time_obj,
-            payment_method=payment_method,
-            payment_status="success" if payment_method == "counter" else "pending"
-        )
+        # 5️⃣ Handle counter payment → CREATE booking immediately
+        if payment_method == "counter":
+            booking = Booking.objects.create(
+                doctor=doctor,
+                patient=request.user,
+                date=date_obj,
+                start_time=start_time_obj,
+                end_time=end_time_obj,
+                payment_method="counter",
+                payment_status="success"
+            )
 
-        PatientBookingInfo.objects.create(
-            booking=booking,
-            full_name=full_name,
-            email=email,
-            phone_number=phone_number,
-            date_of_birth=dob_obj,
-            reason_to_visit=reason_to_visit,
-            symptoms_or_concerns=symptoms_or_concerns
-        )
+            PatientBookingInfo.objects.create(
+                booking=booking,
+                full_name=full_name,
+                email=email,
+                phone_number=phone_number,
+                date_of_birth=dob_obj,
+                reason_to_visit=reason_to_visit,
+                symptoms_or_concerns=symptoms_or_concerns
+            )
 
-        # ✅ Return booking_id for both counter and online payments
+            return Response({
+                "id": booking.id,
+                "message": "Appointment booked successfully (Counter Payment)"
+            }, status=201)
+
+        # 6️⃣ Handle online payment → DO NOT create booking yet
         return Response({
-            "id": booking.id,  # ✅ Added this
-            "message": f"Appointment booked successfully for {start_time_str} - {end_time_str}"
-        }, status=201)
+            "doctor_id": doctor.id,
+            "date": date_str,
+            "start_time": start_time_str,
+            "end_time": end_time_str,
+            "full_name": full_name,
+            "email": email,
+            "phone_number": phone_number,
+            "date_of_birth": date_of_birth,
+            "reason_to_visit": reason_to_visit,
+            "symptoms_or_concerns": symptoms_or_concerns,
+            "message": "Proceed to online payment"
+        }, status=200)
+
 
 
 
