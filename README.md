@@ -1,12 +1,12 @@
 # Full Stack Project
 
-A full stack application with Django backend and React/Vue frontend.
+A full stack application with Django backend and React frontend.
 
 ## Prerequisites
 
 - Python 3.8 or higher
 - Node.js 16 or higher
-- npm or yarn
+- npm
 
 ## Setup Instructions
 
@@ -90,22 +90,7 @@ Make sure both servers are running simultaneously:
 - If `pip install` fails, try upgrading pip: `pip install --upgrade pip`
 - If port 8000 or 3000/5173 is already in use, you can specify a different port
 
-## Project Structure
 
-```
-.
-├── Backend/          # Django backend
-│   ├── manage.py
-│   ├── requirements.txt
-│   └── ...
-└── Frontend/         # Frontend application
-    ├── package.json
-    └── ...
-```
-
-## Contributing
-
-Please ensure all tests pass before submitting pull requests.
 
 ## License
 
