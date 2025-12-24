@@ -1,6 +1,6 @@
-# Full Stack Project
+# MedConnect - A Doctor Appointment Website
 
-A full stack application with Django backend and React frontend.
+A Python full stack application with Django backend and React frontend.
 
 ## Prerequisites
 
