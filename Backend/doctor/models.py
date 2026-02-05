@@ -21,8 +21,6 @@ DAYS_OF_WEEK = [
 
 class DoctorProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='doctor_profile')
-    
-    phone_number = models.CharField(max_length=20)
     specialization = models.CharField(max_length=50, choices=SPECIALIZATION_CHOICES)
     years_of_experience = models.PositiveIntegerField()
     consultation_fee = models.DecimalField(max_digits=10, decimal_places=2)

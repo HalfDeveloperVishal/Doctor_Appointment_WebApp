@@ -8,7 +8,6 @@ class DoctorProfileAdmin(admin.ModelAdmin):
         'user',
         'specialization',
         'clinic_name',
-        'phone_number',
         'years_of_experience',
         'consultation_fee',
     )
@@ -18,13 +17,12 @@ class DoctorProfileAdmin(admin.ModelAdmin):
         'user__last_name',
         'clinic_name',
         'specialization',
-        'phone_number',
     )
     # readonly_fields = ('profile_photo',)
 
     fieldsets = (
         ('Basic Info', {
-            'fields': ('user', 'profile_photo', 'phone_number', 'specialization', 'years_of_experience', 'consultation_fee')
+            'fields': ('user', 'profile_photo',  'specialization', 'years_of_experience', 'consultation_fee')
         }),
         ('Professional Info', {
             'fields': ('qualifications', 'clinic_name', 'address', 'bio')

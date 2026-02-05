@@ -24,7 +24,6 @@ const DAYS_OF_WEEK = [
 ];
 
 interface ProfileData {
-  phone_number: string;
   specialization: string;
   years_of_experience: string;
   consultation_fee: string;
@@ -47,7 +46,6 @@ interface FormErrors {
 export default function DoctorProfileForm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<ProfileData>({
-    phone_number: "",
     specialization: "",
     years_of_experience: "",
     consultation_fee: "",
@@ -64,7 +62,9 @@ export default function DoctorProfileForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value, type } = e.target;
     const files = (e.target as HTMLInputElement).files;
 
@@ -89,7 +89,11 @@ export default function DoctorProfileForm() {
     if (formData.working_days.length === 0) {
       newErrors.working_days = "Please select at least one working day";
     }
-    if (formData.start_time && formData.end_time && formData.start_time >= formData.end_time) {
+    if (
+      formData.start_time &&
+      formData.end_time &&
+      formData.start_time >= formData.end_time
+    ) {
       newErrors.end_time = "End time must be after start time";
     }
     setErrors(newErrors);
@@ -98,7 +102,9 @@ export default function DoctorProfileForm() {
 
   const refreshAccessToken = async (refreshToken: string) => {
     try {
-      const res = await axios.post(`${API_URL}/api/token/refresh/`, { refresh: refreshToken });
+      const res = await axios.post(`${API_URL}/api/token/refresh/`, {
+        refresh: refreshToken,
+      });
       const newToken = res.data.access;
       localStorage.setItem("access_token", newToken);
       return newToken;
@@ -181,7 +187,9 @@ export default function DoctorProfileForm() {
         if (typeof errorData === "object") {
           setErrors(errorData);
           const firstError = Object.values(errorData)[0];
-          const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+          const errorMessage = Array.isArray(firstError)
+            ? firstError[0]
+            : firstError;
           toast.error((errorMessage as string) || "Failed to create profile");
         } else {
           toast.error(errorData.detail || "Failed to create profile");
@@ -196,34 +204,26 @@ export default function DoctorProfileForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto p-8 bg-white shadow-lg rounded-lg space-y-6">
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Create Doctor Profile</h2>
-
-        {/* Phone Number */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-          <input
-            type="tel"
-            name="phone_number"
-            placeholder="+1 234 567 8900"
-            value={formData.phone_number}
-            onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.phone_number ? "border-red-500" : "border-gray-300"
-              }`}
-            required
-          />
-          {errors.phone_number && <p className="text-red-500 text-sm mt-1">{errors.phone_number}</p>}
-        </div>
+      <form
+        onSubmit={handleSubmit}
+        className="max-w-2xl mx-auto p-8 bg-white shadow-lg rounded-lg space-y-6"
+      >
+        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
+          Create Doctor Profile
+        </h2>
 
         {/* Specialization */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Specialization *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Specialization *
+          </label>
           <select
             name="specialization"
             value={formData.specialization}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.specialization ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.specialization ? "border-red-500" : "border-gray-300"
+            }`}
             required
           >
             <option value="">Select Specialization</option>
@@ -233,29 +233,42 @@ export default function DoctorProfileForm() {
               </option>
             ))}
           </select>
-          {errors.specialization && <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>}
+          {errors.specialization && (
+            <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>
+          )}
         </div>
 
         {/* Years of Experience & Consultation Fee */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Years of Experience *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Years of Experience *
+            </label>
             <input
               type="number"
               name="years_of_experience"
               placeholder="5"
               value={formData.years_of_experience}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.years_of_experience ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.years_of_experience
+                  ? "border-red-500"
+                  : "border-gray-300"
+              }`}
               min="0"
               required
             />
-            {errors.years_of_experience && <p className="text-red-500 text-sm mt-1">{errors.years_of_experience}</p>}
+            {errors.years_of_experience && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.years_of_experience}
+              </p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Consultation Fee ($) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Consultation Fee ($) *
+            </label>
             <input
               type="number"
               step="0.01"
@@ -263,74 +276,97 @@ export default function DoctorProfileForm() {
               placeholder="100.00"
               value={formData.consultation_fee}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.consultation_fee ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.consultation_fee ? "border-red-500" : "border-gray-300"
+              }`}
               min="0"
               required
             />
-            {errors.consultation_fee && <p className="text-red-500 text-sm mt-1">{errors.consultation_fee}</p>}
+            {errors.consultation_fee && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.consultation_fee}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Qualifications */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Qualifications *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Qualifications *
+          </label>
           <textarea
             name="qualifications"
             placeholder="MD, MBBS, Board Certified..."
             value={formData.qualifications}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.qualifications ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.qualifications ? "border-red-500" : "border-gray-300"
+            }`}
             rows={3}
             required
           />
-          {errors.qualifications && <p className="text-red-500 text-sm mt-1">{errors.qualifications}</p>}
+          {errors.qualifications && (
+            <p className="text-red-500 text-sm mt-1">{errors.qualifications}</p>
+          )}
         </div>
 
         {/* Clinic Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Clinic Name *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Clinic Name *
+          </label>
           <input
             type="text"
             name="clinic_name"
             placeholder="City Medical Center"
             value={formData.clinic_name}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.clinic_name ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.clinic_name ? "border-red-500" : "border-gray-300"
+            }`}
             required
           />
-          {errors.clinic_name && <p className="text-red-500 text-sm mt-1">{errors.clinic_name}</p>}
+          {errors.clinic_name && (
+            <p className="text-red-500 text-sm mt-1">{errors.clinic_name}</p>
+          )}
         </div>
 
         {/* Address */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Address *
+          </label>
           <textarea
             name="address"
             placeholder="123 Main St, Suite 100, City, State, ZIP"
             value={formData.address}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.address ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.address ? "border-red-500" : "border-gray-300"
+            }`}
             rows={3}
             required
           />
-          {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+          {errors.address && (
+            <p className="text-red-500 text-sm mt-1">{errors.address}</p>
+          )}
         </div>
 
         {/* Working Days */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">Working Days *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Working Days *
+          </label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {DAYS_OF_WEEK.map((day) => (
               <label
                 key={day.value}
-                className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer transition-colors ${formData.working_days.includes(day.value)
+                className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                  formData.working_days.includes(day.value)
                     ? "bg-blue-50 border-blue-500"
                     : "bg-white border-gray-300 hover:bg-gray-50"
-                  }`}
+                }`}
               >
                 <input
                   type="checkbox"
@@ -342,37 +378,49 @@ export default function DoctorProfileForm() {
               </label>
             ))}
           </div>
-          {errors.working_days && <p className="text-red-500 text-sm mt-2">{errors.working_days}</p>}
+          {errors.working_days && (
+            <p className="text-red-500 text-sm mt-2">{errors.working_days}</p>
+          )}
         </div>
 
         {/* Start Time & End Time */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Start Time *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Time *
+            </label>
             <input
               type="time"
               name="start_time"
               value={formData.start_time}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.start_time ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.start_time ? "border-red-500" : "border-gray-300"
+              }`}
               required
             />
-            {errors.start_time && <p className="text-red-500 text-sm mt-1">{errors.start_time}</p>}
+            {errors.start_time && (
+              <p className="text-red-500 text-sm mt-1">{errors.start_time}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">End Time *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Time *
+            </label>
             <input
               type="time"
               name="end_time"
               value={formData.end_time}
               onChange={handleChange}
-              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.end_time ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.end_time ? "border-red-500" : "border-gray-300"
+              }`}
               required
             />
-            {errors.end_time && <p className="text-red-500 text-sm mt-1">{errors.end_time}</p>}
+            {errors.end_time && (
+              <p className="text-red-500 text-sm mt-1">{errors.end_time}</p>
+            )}
           </div>
         </div>
 
@@ -387,20 +435,25 @@ export default function DoctorProfileForm() {
             placeholder="30"
             value={formData.appointment_duration}
             onChange={handleChange}
-            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.appointment_duration ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              errors.appointment_duration ? "border-red-500" : "border-gray-300"
+            }`}
             min="5"
             step="5"
             required
           />
           {errors.appointment_duration && (
-            <p className="text-red-500 text-sm mt-1">{errors.appointment_duration}</p>
+            <p className="text-red-500 text-sm mt-1">
+              {errors.appointment_duration}
+            </p>
           )}
         </div>
 
         {/* Bio */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Bio
+          </label>
           <textarea
             name="bio"
             placeholder="Write something about yourself..."
@@ -413,7 +466,9 @@ export default function DoctorProfileForm() {
 
         {/* Profile Photo */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Profile Photo</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Profile Photo
+          </label>
           <input
             type="file"
             name="profile_photo"
@@ -421,7 +476,9 @@ export default function DoctorProfileForm() {
             className="w-full p-3 border border-gray-300 rounded-lg"
             accept="image/*"
           />
-          {errors.profile_photo && <p className="text-red-500 text-sm mt-1">{errors.profile_photo}</p>}
+          {errors.profile_photo && (
+            <p className="text-red-500 text-sm mt-1">{errors.profile_photo}</p>
+          )}
         </div>
 
         {/* Submit Button */}

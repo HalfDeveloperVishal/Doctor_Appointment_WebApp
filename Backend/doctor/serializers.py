@@ -6,6 +6,10 @@ from patient.models import Booking,PatientBookingInfo
 class DoctorProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='user.get_full_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
+    phone_number = serializers.CharField(
+        source="user.phone_number",
+        read_only=True
+    )
     specialization_display = serializers.CharField(source='get_specialization_display', read_only=True)
     profile_photo_url = serializers.SerializerMethodField()
 
@@ -19,8 +23,7 @@ class DoctorProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoctorProfile
         fields = [
-            'id', 'user', 'full_name', 'email',
-            'phone_number', 'specialization', 'specialization_display',
+            'id', 'user', 'full_name', 'email','phone_number', 'specialization', 'specialization_display',
             'years_of_experience', 'consultation_fee', 'qualifications',
             'clinic_name', 'address', 'working_days',
             'start_time', 'end_time', 'appointment_duration',
@@ -74,7 +77,6 @@ class BookingInfoSerializer(serializers.ModelSerializer):
             return {
                 "full_name": info.full_name,
                 "email": info.email,
-                "phone_number": info.phone_number,
                 "date_of_birth": info.date_of_birth,
                 "reason_to_visit": info.reason_to_visit,
                 "symptoms_or_concerns": info.symptoms_or_concerns,

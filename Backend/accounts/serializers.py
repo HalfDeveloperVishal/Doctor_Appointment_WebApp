@@ -2,11 +2,12 @@
 from rest_framework import serializers
 from .models import CustomUser
 from django.contrib.auth import authenticate
+import re
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['first_name', 'last_name', 'email', 'password', 'role']
+        fields = ['first_name', 'last_name', 'email',  'phone_number','password', 'role']
         extra_kwargs = {
             'password': {'write_only': True},
             'role': {'required': True},
@@ -14,6 +15,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return CustomUser.objects.create_user(**validated_data)
+    
+    def validate_phone_number(self, value):
+        if not re.match(r"^\+?\d{10,15}$", value):
+            raise serializers.ValidationError("Invalid phone number format")
+        return value
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()

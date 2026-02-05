@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import signupImage from "../../assets/signup-doctor.jpg";
+
+import styles from "./SignUpForm.module.css";
 
 const SignUpForm: React.FC = () => {
   const navigate = useNavigate();
@@ -15,14 +17,40 @@ const SignUpForm: React.FC = () => {
     first_name: "",
     last_name: "",
     email: "",
+    phone_number: "",
     password: "",
     role: role,
     agreeTerms: false,
     agreeMarketing: false,
   });
 
+  const [passwordTouched, setPasswordTouched] = useState(false);
+
+  const passwordRules = {
+    length: (pwd: string) => pwd.length >= 8,
+    uppercase: (pwd: string) => /[A-Z]/.test(pwd),
+    lowercase: (pwd: string) => /[a-z]/.test(pwd),
+    number: (pwd: string) => /\d/.test(pwd),
+    special: (pwd: string) => /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+  };
+
+  const passwordStatus = {
+    length: passwordRules.length(formData.password),
+    uppercase: passwordRules.uppercase(formData.password),
+    lowercase: passwordRules.lowercase(formData.password),
+    number: passwordRules.number(formData.password),
+    special: passwordRules.special(formData.password),
+  };
+
+  const isPasswordValid = Object.values(passwordStatus).every(Boolean);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+
+    if (name === "password") {
+      setPasswordTouched(true);
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -37,33 +65,24 @@ const SignUpForm: React.FC = () => {
       return;
     }
 
+    if (!isPasswordValid) {
+      toast.warn("Please follow all password rules.");
+      return;
+    }
+
     try {
       const { agreeTerms, agreeMarketing, ...postData } = formData;
 
       const res = await axios.post(
         "http://localhost:8000/accounts/register/",
         postData,
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } },
       );
 
       toast.success(res.data.message || "Account created successfully!");
       navigate(`/login?role=${formData.role}`);
-    } catch (err: any) {
-      const backend = err.response?.data;
-
-      let errorMsg =
-        backend?.message ||
-        backend?.error ||
-        backend?.detail ||
-        backend?.email?.[0] ||
-        backend?.password?.[0] ||
-        "Registration failed. Please check your inputs.";
-
-      if (backend?.email?.[0]?.includes("exists")) {
-        errorMsg = "User with this email already exists.";
-      }
-
-      toast.error(errorMsg);
+    } catch {
+      toast.error("Registration failed.");
     }
   };
 
@@ -74,176 +93,163 @@ const SignUpForm: React.FC = () => {
         {
           credential: credentialResponse.credential,
           role: formData.role,
-        }
+        },
       );
 
       if (res.status === 201) {
         toast.success("Account created successfully with Google!");
         navigate(`/login?role=${formData.role}`);
       }
-    } catch (err: any) {
-      const backend = err.response?.data;
-
-      let errorMsg =
-        backend?.message ||
-        backend?.error ||
-        backend?.detail ||
-        "Google signup failed.";
-
-      if (
-        backend?.message?.toLowerCase().includes("exists") ||
-        backend?.error?.toLowerCase().includes("exists")
-      ) {
-        errorMsg = "User already exists. Please login.";
-      }
-
-      toast.error(errorMsg);
+    } catch {
+      toast.error("Google signup failed.");
     }
   };
 
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-      <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] p-4">
-        <div className="bg-[var(--color-surface)] shadow-xl rounded-2xl max-w-4xl w-full grid md:grid-cols-2 overflow-hidden border border-gray-100">
-
-          {/* LEFT IMAGE SECTION */}
-          <div
-            className="hidden md:flex relative text-white p-8 flex-col justify-center items-center"
-            style={{
-              backgroundImage:
-                "url('https://images.unsplash.com/photo-1580281657527-47a1b0e6c168?auto=format&fit=crop&w=900&q=80')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          >
-            <div className="absolute inset-0 bg-[var(--color-primary)] bg-opacity-80 mix-blend-multiply"></div>
-
-            <div className="relative z-10 text-center">
-              <h2 className="text-3xl font-bold mb-3 font-[var(--font-heading)]">Welcome to MedConnect</h2>
-              <p className="text-blue-50 text-base">
-                Your trusted online doctor appointment system.
-              </p>
-            </div>
+      <div className={styles.container}>
+        <div className={styles.card}>
+          {/* LEFT IMAGE */}
+          <div className={styles.left}>
+            <img
+              src={signupImage}
+              alt="Signup illustration"
+              className={styles.leftImage}
+            />
           </div>
 
-          {/* RIGHT FORM SECTION */}
-          <div className="p-8 md:p-10">
-            <h2 className="text-2xl font-bold text-[var(--color-primary)] mb-4">
+          {/* RIGHT FORM */}
+          <div className={styles.right}>
+            <h2 className={styles.heading}>
               Create your account as <span className="capitalize">{role}</span>
             </h2>
 
-            {/* GOOGLE SIGNUP */}
-            <div className="mb-6 flex justify-center">
-              <GoogleLogin
-                onSuccess={handleGoogleSignUp}
-                onError={() => toast.error("Google signup failed")}
-                text="signup_with"
-                width="330"
-              />
+            <div className={styles.googleWrapper}>
+              <GoogleLogin onSuccess={handleGoogleSignUp} />
             </div>
 
-            <div className="flex items-center my-6">
-              <hr className="flex-1 border-gray-200" />
-              <span className="mx-3 text-[var(--color-text-muted)] text-sm">or</span>
-              <hr className="flex-1 border-gray-200" />
+            <div className={styles.divider}>
+              <hr />
+              <span>or</span>
+              <hr />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-
-              {/* NAME ROW */}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    name="first_name"
-                    placeholder="First name"
-                    onChange={handleChange}
-                    className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    name="last_name"
-                    placeholder="Last name"
-                    onChange={handleChange}
-                    className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <div className={styles.row}>
+                <input
+                  className={styles.input}
+                  name="first_name"
+                  placeholder="First name"
+                  onChange={handleChange}
+                  required
+                />
+                <input
+                  className={styles.input}
+                  name="last_name"
+                  placeholder="Last name"
+                  onChange={handleChange}
+                  required
+                />
               </div>
 
               <input
-                type="email"
+                className={styles.input}
                 name="email"
+                type="email"
                 placeholder="Email address"
                 onChange={handleChange}
-                className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 required
               />
 
               <input
-                type="password"
-                name="password"
-                placeholder="Password"
+                className={styles.input}
+                name="phone_number"
+                type="tel"
+                placeholder="Phone number"
                 onChange={handleChange}
-                className="w-full p-3 rounded-lg border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 required
               />
 
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Use 8+ characters with letters, numbers & symbols
-              </p>
+              <input
+                className={styles.input}
+                name="password"
+                type="password"
+                placeholder="Password"
+                onChange={handleChange}
+                required
+              />
 
-              <div className="text-xs space-y-3 text-[var(--color-text-muted)]">
-                <label className="flex items-start gap-2 cursor-pointer">
+              {/* PASSWORD RULES */}
+              {passwordTouched && !isPasswordValid && (
+                <ul className={styles.passwordRules}>
+                  <li
+                    className={
+                      passwordStatus.length ? styles.valid : styles.invalid
+                    }
+                  >
+                    At least 8 characters
+                  </li>
+                  <li
+                    className={
+                      passwordStatus.uppercase ? styles.valid : styles.invalid
+                    }
+                  >
+                    One uppercase letter (A–Z)
+                  </li>
+                  <li
+                    className={
+                      passwordStatus.lowercase ? styles.valid : styles.invalid
+                    }
+                  >
+                    One lowercase letter (a–z)
+                  </li>
+                  <li
+                    className={
+                      passwordStatus.number ? styles.valid : styles.invalid
+                    }
+                  >
+                    One number (0–9)
+                  </li>
+                  <li
+                    className={
+                      passwordStatus.special ? styles.valid : styles.invalid
+                    }
+                  >
+                    One special character (!@#$%^&)
+                  </li>
+                </ul>
+              )}
+
+              <div className={styles.checkboxGroup}>
+                <label className={styles.checkbox}>
                   <input
                     type="checkbox"
                     name="agreeTerms"
                     checked={formData.agreeTerms}
                     onChange={handleChange}
-                    className="mt-0.5 accent-[var(--color-primary)]"
                   />
                   <span>
-                    I agree to the{" "}
-                    <a href="#" className="text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
-                      Terms of use
-                    </a>{" "}
-                    and{" "}
-                    <a href="#" className="text-[var(--color-primary)] underline hover:text-[var(--color-primary-hover)]">
-                      Privacy Policy
-                    </a>.
+                    I agree to the <a className={styles.link}>Terms</a> and{" "}
+                    <a className={styles.link}>Privacy Policy</a>
                   </span>
                 </label>
 
-                <label className="flex items-start gap-2 cursor-pointer">
+                <label className={styles.checkbox}>
                   <input
                     type="checkbox"
                     name="agreeMarketing"
                     checked={formData.agreeMarketing}
                     onChange={handleChange}
-                    className="mt-0.5 accent-[var(--color-primary)]"
                   />
-                  <span>I agree to receive updates and notifications.</span>
+                  <span>I agree to receive updates.</span>
                 </label>
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-full font-semibold text-sm shadow-md transition-colors mt-2"
-              >
-                Create Account
-              </button>
+              <button className={styles.submit}>Create Account</button>
 
-              <p className="text-sm text-center mt-4 text-[var(--color-text-main)]">
+              <p className={styles.footer}>
                 Already have an account?{" "}
-                <a
-                  href={`/login?role=${role}`}
-                  className="text-[var(--color-primary)] font-semibold hover:underline"
-                >
-                  Log in
-                </a>
+                <a href={`/login?role=${role}`}>Log in</a>
               </p>
             </form>
           </div>
