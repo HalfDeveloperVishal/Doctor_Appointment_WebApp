@@ -36,13 +36,13 @@ const LoginForm: React.FC = () => {
           {
             headers: { Authorization: `Bearer ${loginData.access}` },
             withCredentials: true,
-          }
+          },
         );
 
         navigate(
           checkProfile.data.has_profile
             ? "/doctor-dashboard"
-            : "/doctor-profile-create"
+            : "/doctor-profile-create",
         );
       } catch {
         navigate("/doctor-dashboard");
@@ -60,16 +60,26 @@ const LoginForm: React.FC = () => {
       const res = await axios.post(
         "http://localhost:8000/accounts/login/",
         formData,
-        { headers: { "Content-Type": "application/json" }, withCredentials: true }
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        },
       );
 
       await handleLoginSuccess(res.data);
     } catch (err: any) {
-      toast.error(
+      const errorMessage =
+        err.response?.data?.non_field_errors?.[0] ||
         err.response?.data?.message ||
-          err.response?.data?.error ||
-          "Invalid credentials"
-      );
+        err.response?.data?.error ||
+        "Invalid credentials";
+
+      if (errorMessage === "Email not verified") {
+        toast.error("Please verify your email before logging in.");
+        navigate("/check-email");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +91,10 @@ const LoginForm: React.FC = () => {
       const res = await axios.post(
         "http://localhost:8000/accounts/google-login/",
         { credential: credentialResponse.credential },
-        { headers: { "Content-Type": "application/json" }, withCredentials: true }
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        },
       );
 
       await handleLoginSuccess(res.data);
@@ -144,6 +157,9 @@ const LoginForm: React.FC = () => {
               {isLoading ? "Logging in..." : "Login"}
             </button>
           </form>
+          <div style={{ textAlign: "right", marginTop: "5px" }}>
+            <a href="/forgot-password">Forgot Password?</a>
+          </div>
 
           <div className={styles.footer}>
             <p>Not registered?</p>

@@ -1,5 +1,4 @@
 # patient/views_payment.py
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -12,6 +11,7 @@ import os
 
 from ..models import Booking, PatientBookingInfo
 from doctor.models import DoctorProfile
+from ..utils import send_booking_confirmation_email
 
 load_dotenv()
 
@@ -144,7 +144,7 @@ class VerifyPaymentView(APIView):
         )
 
         # Create patient info
-        PatientBookingInfo.objects.create(
+        patient_info = PatientBookingInfo.objects.create(
             booking=booking,
             full_name=full_name,
             email=email,
@@ -153,6 +153,8 @@ class VerifyPaymentView(APIView):
             reason_to_visit=reason_to_visit,
             symptoms_or_concerns=symptoms_or_concerns
         )
+        
+        send_booking_confirmation_email(request.user, booking, patient_info)
 
         return Response({
             "success": True,

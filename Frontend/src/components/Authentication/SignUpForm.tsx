@@ -76,14 +76,21 @@ const SignUpForm: React.FC = () => {
       const res = await axios.post(
         "http://localhost:8000/accounts/register/",
         postData,
-        { headers: { "Content-Type": "application/json" } },
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      toast.success(res.data.message || "Account created successfully!");
-      navigate(`/login?role=${formData.role}`);
-    } catch {
-      toast.error("Registration failed.");
+      toast.success(
+        "Account created successfully! Please check your email to verify your account."
+      );
+
+      navigate("/check-email");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message ||
+          "Registration failed."
+      );
     }
+
   };
 
   const handleGoogleSignUp = async (credentialResponse: any) => {

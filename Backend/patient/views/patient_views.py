@@ -12,6 +12,7 @@ from ..serializers import BookingSerializer,PatientBookingInfoSerializer,Patient
 from doctor.serializers import DoctorProfileSerializer 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from ..utils import send_booking_confirmation_email
 
 
 class DoctorListView(generics.ListAPIView):
@@ -96,7 +97,7 @@ class BookSlotView(APIView):
                 payment_status="success"
             )
 
-            PatientBookingInfo.objects.create(
+            patient_info=PatientBookingInfo.objects.create(
                 booking=booking,
                 full_name=full_name,
                 email=email,
@@ -105,6 +106,8 @@ class BookSlotView(APIView):
                 reason_to_visit=reason_to_visit,
                 symptoms_or_concerns=symptoms_or_concerns
             )
+            
+            send_booking_confirmation_email(request.user, booking, patient_info)
 
             return Response({
                 "id": booking.id,
