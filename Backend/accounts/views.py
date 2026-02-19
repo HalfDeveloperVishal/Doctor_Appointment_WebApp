@@ -11,24 +11,52 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from dotenv import load_dotenv
 import os
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from .utils import email_verification_token
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
+from django.utils import timezone
+from datetime import timedelta
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+
+password_reset_token = PasswordResetTokenGenerator()
+
 load_dotenv()
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
+
         if serializer.is_valid():
             user = serializer.save()
-            refresh = RefreshToken.for_user(user)
+
+            # 🔐 deactivate until email verified
+            user.is_active = False
+            user.save()
+
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = email_verification_token.make_token(user)
+
+            verification_link = f"http://localhost:5173/verify-email/{uid}/{token}/"
+
+
+            send_mail(
+                subject="Verify your account",
+                message=f"Click to verify your account:\n{verification_link}",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[user.email],
+            )
 
             return Response({
-                "message": "User registered successfully",
-                "role": user.role,
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "is_profile_completed": False
+                "message": "Registration successful. Please verify your email."
             }, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -91,12 +119,14 @@ class SignupGoogleAuthView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             user = CustomUser.objects.create(
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                role=request.data.get("role", "patient"),
-                is_active=True
-            )
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            role=request.data.get("role", "patient"),
+            is_active=True,
+            is_verified=True  # ✅ auto verified
+)
+
 
             refresh = RefreshToken.for_user(user)
 
@@ -158,3 +188,76 @@ class LoginGoogleAuthView(APIView):
 
         except ValueError:
             return Response({"error": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = CustomUser.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            return Response({"error": "Invalid link"}, status=400)
+
+        if not email_verification_token.check_token(user, token):
+            return Response({"error": "Invalid or expired token"}, status=400)
+
+        if user.is_verified:
+            return Response({"message": "Account already verified."})
+
+        user.is_verified = True
+        user.is_active = True  # 🔓 activate account
+        user.save()
+
+        return Response({"message": "Email verified successfully!"})
+
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
+
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User with this email does not exist"}, status=404)
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = password_reset_token.make_token(user)
+
+        reset_link = f"http://localhost:5173/reset-password/{uid}/{token}/"
+
+        send_mail(
+            subject="Reset Your Password",
+            message=f"Click the link to reset your password:\n{reset_link}",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+        )
+
+        return Response({"message": "Password reset email sent."}, status=200)
+
+class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = CustomUser.objects.get(pk=uid)
+        except:
+            return Response({"error": "Invalid link"}, status=400)
+
+        if not password_reset_token.check_token(user, token):
+            return Response({"error": "Invalid or expired token"}, status=400)
+
+        new_password = request.data.get("password")
+
+        if not new_password:
+            return Response({"error": "Password is required"}, status=400)
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "Password reset successful!"})

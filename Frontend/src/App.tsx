@@ -14,6 +14,10 @@ import AppointmnetInfoPage from "./components/doctor/AppointmentPage/Appointmnet
 import MultiStepSlotBooking from "./components/User/BookingPage/SlotBookingPage";
 import Dashboard from "./components/doctor/Dashboard/Dashboard";
 import PatientAppointmentsPage from "./components/User/PatientAppoinmentPage/PatientAppoinmentPage";
+import CheckEmail from "./components/Authentication/CheckEmail";
+import VerifyEmail from "./components/Authentication/VerifyEmail";
+import ForgotPassword from "./components/Authentication/ForgotPassoword";
+import ResetPassword from "./components/Authentication/ResetPassword";
 
 function App() {
   return (
@@ -38,6 +42,11 @@ function App() {
         {/* Auth pages (standalone, no navbar) */}
         <Route path="/signup" element={<SignUpForm />} />
         <Route path="/login" element={<LoginForm />} />
+        <Route path="/verify-email/:uid/:token" element={<VerifyEmail />} />
+        <Route path="/check-email" element={<CheckEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
+        <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
 
         {/* Doctor section with doctor layout */}
         <Route element={<Layout />}>
