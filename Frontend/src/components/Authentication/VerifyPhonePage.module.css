@@ -1,0 +1,79 @@
+.container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f7fb;
+}
+
+.card {
+  width: 400px;
+  padding: 40px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+.heading {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.subtext {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 25px;
+}
+
+.phoneContainer {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.prefix {
+  background: #f1f1f1;
+  padding: 10px 14px;
+  font-weight: 600;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  outline: none;
+  font-size: 14px;
+}
+
+.otpInput {
+  width: 100%;
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.button {
+  width: 100%;
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+.button:hover {
+  background: #1e4ed8;
+}
+
+.otpSection {
+  margin-top: 20px;
+}

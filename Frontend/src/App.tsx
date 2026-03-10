@@ -18,6 +18,7 @@ import CheckEmail from "./components/Authentication/CheckEmail";
 import VerifyEmail from "./components/Authentication/VerifyEmail";
 import ForgotPassword from "./components/Authentication/ForgotPassoword";
 import ResetPassword from "./components/Authentication/ResetPassword";
+import VerifyPhonePage from "./components/Authentication/VerifyPhonePage";
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
         <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
+        <Route path="/verify-phone" element={<VerifyPhonePage/>} />
 
         {/* Doctor section with doctor layout */}
         <Route element={<Layout />}>

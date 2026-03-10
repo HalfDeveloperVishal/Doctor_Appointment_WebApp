@@ -25,6 +25,10 @@ const SignUpForm: React.FC = () => {
   });
 
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   const passwordRules = {
     length: (pwd: string) => pwd.length >= 8,
@@ -57,6 +61,47 @@ const SignUpForm: React.FC = () => {
     }));
   };
 
+  const handleSendOTP = async () => {
+    if (formData.phone_number.length !== 10) {
+      toast.warning("Enter valid 10 digit phone number");
+      return;
+    }
+
+    try {
+      setSendingOtp(true);
+
+      await axios.post("http://localhost:8000/accounts/send-otp/", {
+        phone_number: `+91${formData.phone_number}`,
+      });
+
+      toast.success("OTP sent successfully");
+      setOtpSent(true);
+    } catch {
+      toast.error("Failed to send OTP");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp) {
+      toast.warning("Enter OTP");
+      return;
+    }
+
+    try {
+      await axios.post("http://localhost:8000/accounts/verify-otp/", {
+        phone_number: `+91${formData.phone_number}`,
+        otp: otp,
+      });
+
+      toast.success("Phone verified successfully!");
+      setPhoneVerified(true);
+    } catch {
+      toast.error("Invalid or expired OTP");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -76,24 +121,20 @@ const SignUpForm: React.FC = () => {
       const res = await axios.post(
         "http://localhost:8000/accounts/register/",
         postData,
-        { headers: { "Content-Type": "application/json" } }
+        { headers: { "Content-Type": "application/json" } },
       );
 
       toast.success(
-        "Account created successfully! Please check your email to verify your account."
+        "Account created successfully! Please check your email to verify your account.",
       );
 
       navigate("/check-email");
     } catch (err: any) {
-      toast.error(
-        err.response?.data?.message ||
-          "Registration failed."
-      );
+      toast.error(err.response?.data?.message || "Registration failed.");
     }
-
   };
 
-  const handleGoogleSignUp = async (credentialResponse: any) => {
+  const handleGoogleSignUp = async (credentialResponse) => {
     try {
       const res = await axios.post(
         "http://localhost:8000/accounts/google-signup/",
@@ -103,8 +144,11 @@ const SignUpForm: React.FC = () => {
         },
       );
 
-      if (res.status === 201) {
-        toast.success("Account created successfully with Google!");
+      if (res.data.is_phone_verified === false) {
+        navigate("/verify-phone", {
+          state: { userId: res.data.user_id },
+        });
+      } else {
         navigate(`/login?role=${formData.role}`);
       }
     } catch {
@@ -168,14 +212,65 @@ const SignUpForm: React.FC = () => {
                 required
               />
 
-              <input
-                className={styles.input}
-                name="phone_number"
-                type="tel"
-                placeholder="Phone number"
-                onChange={handleChange}
-                required
-              />
+              <div className={styles.phoneWrapper}>
+                <div className={styles.phoneInputContainer}>
+                  <span className={styles.prefix}>+91</span>
+
+                  <input
+                    className={styles.phoneInput}
+                    name="phone_number"
+                    type="tel"
+                    placeholder="9876543210"
+                    maxLength={10}
+                    pattern="[6-9]{1}[0-9]{9}"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, ""); // only digits
+                      if (value.length <= 10) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          phone_number: value,
+                        }));
+                      }
+                      setPhoneVerified(false);
+                    }}
+                    required
+                    disabled={phoneVerified}
+                  />
+                </div>
+
+                {!phoneVerified && (
+                  <button
+                    type="button"
+                    className={styles.otpButton}
+                    onClick={handleSendOTP}
+                    disabled={sendingOtp}
+                  >
+                    {sendingOtp ? "Sending..." : "Send OTP"}
+                  </button>
+                )}
+
+                {phoneVerified && (
+                  <span className={styles.verifiedBadge}>Verified ✓</span>
+                )}
+              </div>
+
+              {otpSent && !phoneVerified && (
+                <div className={styles.otpSection}>
+                  <input
+                    className={styles.input}
+                    placeholder="Enter OTP"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className={styles.verifyButton}
+                    onClick={handleVerifyOTP}
+                  >
+                    Verify
+                  </button>
+                </div>
+              )}
 
               <input
                 className={styles.input}
@@ -252,7 +347,9 @@ const SignUpForm: React.FC = () => {
                 </label>
               </div>
 
-              <button className={styles.submit}>Create Account</button>
+              <button className={styles.submit} disabled={!phoneVerified}>
+                Create Account
+              </button>
 
               <p className={styles.footer}>
                 Already have an account?{" "}

@@ -41,7 +41,6 @@
   object-fit: fill;
 }
 
-
 /* RIGHT FORM */
 .right {
   padding: 2.5rem;
@@ -130,7 +129,7 @@
 }
 
 .link {
-  color: #4A90E2;
+  color: #4a90e2;
   text-decoration: underline;
 }
 
@@ -139,7 +138,7 @@
   width: 100%;
   padding: 0.75rem;
   border-radius: 10px;
-  background: #4A90E2;
+  background: #4a90e2;
   color: white;
   font-weight: 600;
   border: none;
@@ -155,7 +154,7 @@
 }
 
 .footer a {
-  color: #4A90E2;
+  color: #4a90e2;
   font-weight: 600;
 }
 
@@ -177,7 +176,6 @@
   color: #dc2626;
 }
 
-
 @media (max-width: 768px) {
   .left {
     display: none;
@@ -188,3 +186,62 @@
   }
 }
 
+.phoneWrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.otpButton {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #4a90e2;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.otpSection {
+  display: flex;
+  gap: 8px;
+}
+
+.verifyButton {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #16a34a;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.verifiedBadge {
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.phoneInputContainer {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  overflow: hidden;
+  width: 75%;
+}
+
+.prefix {
+  padding: 10px;
+  background: #f3f3f3;
+  font-weight: 600;
+}
+
+.phoneInput {
+  border: none;
+  outline: none;
+  padding: 10px;
+  flex: 1;
+}

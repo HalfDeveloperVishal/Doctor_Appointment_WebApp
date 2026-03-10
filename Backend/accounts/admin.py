@@ -11,6 +11,7 @@ class CustomUserAdmin(UserAdmin):
         'first_name',
         'last_name',
         'role',
+        "is_phone_verified",
         'is_verified',   # ✅ added
         'is_staff',
         'is_superuser'
@@ -18,6 +19,7 @@ class CustomUserAdmin(UserAdmin):
 
     list_filter = (
         'role',
+        "is_phone_verified",
         'is_verified',   # ✅ added
         'is_staff',
         'is_superuser',
@@ -33,7 +35,7 @@ class CustomUserAdmin(UserAdmin):
             'fields': ('first_name', 'last_name', 'role')
         }),
         ("Verification", {  # ✅ added section
-            'fields': ('is_verified',)
+            'fields': ('is_verified', "is_phone_verified",)
         }),
         ("Permissions", {
             'fields': (
@@ -62,7 +64,8 @@ class CustomUserAdmin(UserAdmin):
                 'is_active',
                 'is_staff',
                 'is_superuser',
-                'is_verified',  # ✅ added here too
+                'is_verified',
+                "is_phone_verified",# ✅ added here too
             ),
         }),
     )

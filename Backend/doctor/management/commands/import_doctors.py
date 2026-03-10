@@ -1,7 +1,9 @@
 import pandas as pd
+import json
 from django.core.management.base import BaseCommand
 from accounts.models import CustomUser
 from doctor.models import DoctorProfile
+
 
 class Command(BaseCommand):
     help = "Import doctors from an Excel file and create users + profiles"
@@ -21,34 +23,36 @@ class Command(BaseCommand):
         for index, row in df.iterrows():
             email = row["email"]
 
-            # Skip if doctor already exists
             if CustomUser.objects.filter(email=email).exists():
                 self.stdout.write(self.style.WARNING(
                     f"⚠️ Doctor {email} already exists. Skipping."
                 ))
                 continue
 
-            # Create user with fixed password
+            # ✅ Create user with phone number
             user = CustomUser.objects.create_user(
                 first_name=row["first_name"],
                 last_name=row["last_name"],
                 email=email,
-                password="Vishal@2003",  # fixed password
+                phone_number=row["phone_number"],
+                password="Vishal@2003",
                 role="doctor",
+                is_active=True,
+                is_verified=True,
+                is_phone_verified=True
             )
 
-            # Parse working_days (stored as JSON string in Excel)
+            # safer parsing instead of eval
             working_days = row["working_days"]
             if isinstance(working_days, str):
                 try:
-                    working_days = eval(working_days)
-                except Exception:
+                    working_days = json.loads(working_days)
+                except:
                     working_days = []
 
-            # Create doctor profile
+            # ✅ Create doctor profile (NO phone_number here)
             DoctorProfile.objects.create(
                 user=user,
-                phone_number=row["phone_number"],
                 specialization=row["specialization"],
                 years_of_experience=int(row["years_of_experience"]),
                 consultation_fee=float(row["consultation_fee"]),

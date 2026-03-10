@@ -1,3 +1,5 @@
+import random
+from .models import PhoneOTP
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -18,6 +20,7 @@ from .utils import email_verification_token
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from django.utils import timezone
+import threading
 from datetime import timedelta
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
@@ -25,6 +28,18 @@ password_reset_token = PasswordResetTokenGenerator()
 
 load_dotenv()
 
+
+def send_verification_email(user, verification_link):
+    """
+    Sends email verification link in background thread
+    """
+    send_mail(
+        subject="Verify your account",
+        message=f"Click the link to verify your account:\n\n{verification_link}",
+        from_email=settings.EMAIL_HOST_USER,
+        recipient_list=[user.email],
+        fail_silently=True,  # prevents crash if email fails
+    )
 class RegisterView(APIView):
     permission_classes = [AllowAny]
 
@@ -32,24 +47,37 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
 
         if serializer.is_valid():
-            user = serializer.save()
 
-            # 🔐 deactivate until email verified
-            user.is_active = False
+            phone_number = request.data.get("phone_number")
+
+            # Check if phone OTP is verified
+            otp_verified = PhoneOTP.objects.filter(
+                phone_number=phone_number,
+                is_verified=True
+            ).exists()
+
+            if not otp_verified:
+                return Response(
+                    {"error": "Phone number not verified"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Create user
+            user = serializer.save()
+            user.is_phone_verified = True
+            user.is_active = False  # Activate only after email verify
             user.save()
 
+            # Generate email verification link
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = email_verification_token.make_token(user)
 
-            verification_link = f"http://localhost:5173/verify-email/{uid}/{token}/"
-
-
-            send_mail(
-                subject="Verify your account",
-                message=f"Click to verify your account:\n{verification_link}",
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[user.email],
+            verification_link = (
+                f"http://localhost:5173/verify-email/{uid}/{token}/"
             )
+
+            # Send email in background thread (non-blocking)
+            send_verification_email(user, verification_link)
 
             return Response({
                 "message": "Registration successful. Please verify your email."
@@ -140,7 +168,9 @@ class SignupGoogleAuthView(APIView):
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
                 "is_profile_completed": is_profile_completed,
-                "user_id": user.id
+                "user_id": user.id,
+                "is_phone_verified": user.is_phone_verified,
+                "phone_number": user.phone_number
             }, status=status.HTTP_201_CREATED)
 
         except ValueError:
@@ -261,3 +291,61 @@ class ResetPasswordView(APIView):
         user.save()
 
         return Response({"message": "Password reset successful!"})
+
+class SendPhoneOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get("phone_number")
+
+        if not phone_number:
+            return Response({"error": "Phone number is required"}, status=400)
+
+        otp = str(random.randint(100000, 999999))
+
+        PhoneOTP.objects.create(
+            phone_number=phone_number,
+            otp=otp
+        )
+
+        print("OTP:", otp)
+
+        return Response({"message": "OTP sent successfully"})
+    
+class VerifyPhoneOTPView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get("phone_number")
+        otp = request.data.get("otp")
+        user_id = request.data.get("user_id")
+        
+        # Prevent duplicate phone numbers
+        if CustomUser.objects.filter(phone_number=phone_number).exists():
+            return Response({"error": "Phone already in use"}, status=400)
+
+        otp_obj = PhoneOTP.objects.filter(
+            phone_number=phone_number,
+            otp=otp,
+            is_verified=False
+        ).order_by("-created_at").first()
+
+        if not otp_obj:
+            return Response({"error": "Invalid OTP"}, status=400)
+
+        if timezone.now() > otp_obj.created_at + timedelta(minutes=5):
+            return Response({"error": "OTP expired"}, status=400)
+
+        otp_obj.is_verified = True
+        otp_obj.save()
+
+        # update user
+        try:
+            user = CustomUser.objects.get(id=user_id)
+            user.phone_number = phone_number
+            user.is_phone_verified = True
+            user.save()
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+        return Response({"message": "Phone verified successfully"})
