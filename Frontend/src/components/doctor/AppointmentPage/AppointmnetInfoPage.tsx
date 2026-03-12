@@ -21,14 +21,15 @@ interface Booking {
   patient_info?: PatientInfo;
 }
 
+// Tab Types for the new UI
+type TabType = "Upcoming" | "Past" | "Cancelled";
+
 const DoctorBookingsPage: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
-
-  const [showToday, setShowToday] = useState<boolean>(true);
-  const [showUpcoming, setShowUpcoming] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<TabType>("Upcoming");
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -51,25 +52,28 @@ const DoctorBookingsPage: React.FC = () => {
     fetchBookings();
   }, []);
 
+  // Filter by Search Term
   const filteredBookings = bookings.filter((booking) => {
     const patient = booking.patient_info || {} as PatientInfo;
     const fullName = patient.full_name || booking.patient_full_name || "";
     return fullName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const todaysBookings = filteredBookings.filter((booking) => {
+  // Filter by Tab Status
+  const getTabStatus = (booking: Booking): TabType => {
     const date = new Date(booking.date).toISOString().split("T")[0];
-    return date === todayStr;
-  });
+    if (booking.is_rejected) return "Cancelled";
+    if (date === todayStr) return "Upcoming";
+    if (date > todayStr) return "Upcoming";
+    return "Past";
+  };
 
-  const upcomingBookings = filteredBookings.filter((booking) => {
-    const date = new Date(booking.date).toISOString().split("T")[0];
-    return date > todayStr;
+  const tabFilteredBookings = filteredBookings.filter((booking) => {
+    return getTabStatus(booking) === activeTab;
   });
 
   const handleReject = async (bookingId: number) => {
     const reason = prompt("Enter rejection reason (optional):") || "";
-
     try {
       const res = await axios.post(
         `http://localhost:8000/patient/booking/${bookingId}/reject/`,
@@ -80,18 +84,27 @@ const DoctorBookingsPage: React.FC = () => {
           },
         }
       );
-
       setBookings((prev) =>
         prev.map((b) => (b.id === bookingId ? res.data : b))
       );
-
       alert("Booking rejected successfully");
     } catch {
       alert("Failed to reject booking.");
     }
   };
 
-  if (loading) return <p className="p-4">Loading...</p>;
+  // Placeholder actions for new buttons
+  const handleCancel = (id: number) => {
+    handleReject(id); // Reusing reject logic for Cancel
+  };
+  const handleReschedule = (id: number) => {
+    alert(`Reschedule appointment ${id} - Implement logic`);
+  };
+  const handleViewSummary = (id: number) => {
+    alert(`View summary for appointment ${id} - Implement logic`);
+  };
+
+  if (loading) return <p className="p-4 text-gray-600">Loading...</p>;
   if (error) return <p className="p-4 text-red-500">{error}</p>;
 
   return (
@@ -101,165 +114,194 @@ const DoctorBookingsPage: React.FC = () => {
         <input
           type="text"
           placeholder="Search by patient name..."
-          className="w-full text-gray-700 placeholder-gray-400 focus:outline-none"
+          className="w-full text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* TODAY'S APPOINTMENTS */}
-      <div className="mb-6 bg-white shadow-sm border rounded-lg">
-        <button
-          onClick={() => setShowToday(!showToday)}
-          className="w-full flex justify-between px-5 py-3 text-lg font-semibold bg-gray-100 hover:bg-gray-200"
-        >
-          <span>Today's Appointments ({todaysBookings.length})</span>
-          <span>{showToday ? "▲" : "▼"}</span>
-        </button>
+      {/* MY APPOINTMENTS SECTION */}
+      <div className="bg-white shadow-sm border border-gray-200 rounded-lg overflow-hidden">
+        {/* Header */}
+        <div className="p-5 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">My Appointments</h2>
+          <p className="text-gray-500 text-sm mt-1">
+            View and manage all your past and future appointments.
+          </p>
+        </div>
 
-        {showToday && todaysBookings.length > 0 && (
-          <TableSection bookings={todaysBookings} handleReject={handleReject} />
-        )}
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 bg-gray-50">
+          {(["Upcoming", "Past", "Cancelled"] as TabType[]).map((tab) => {
+            const count = tabFilteredBookings.filter((b) => getTabStatus(b) === tab).length;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-5 py-3 text-sm font-semibold transition-colors flex items-center space-x-2 ${
+                  activeTab === tab
+                    ? "bg-white text-blue-600 border-b-2 border-blue-600"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                <span>{tab}</span>
+                <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full text-xs">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-        {showToday && todaysBookings.length === 0 && (
-          <p className="px-5 py-3 text-gray-500">No appointments today.</p>
-        )}
-      </div>
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left">
+            <thead>
+              <tr className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold tracking-wide">
+                <th className="px-4 py-3">Patient</th>
+                <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Reason</th>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Time</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {tabFilteredBookings.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-gray-500 text-sm">No appointments in this category.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
 
-      {/* UPCOMING APPOINTMENTS */}
-      <div className="mb-6 bg-white shadow-sm border rounded-lg">
-        <button
-          onClick={() => setShowUpcoming(!showUpcoming)}
-          className="w-full flex justify-between px-5 py-3 text-lg font-semibold bg-gray-100 hover:bg-gray-200"
-        >
-          <span>Upcoming Appointments ({upcomingBookings.length})</span>
-          <span>{showUpcoming ? "▲" : "▼"}</span>
-        </button>
+              {tabFilteredBookings.map((booking) => {
+                const p = booking.patient_info || {} as PatientInfo;
+                const fullName = p.full_name || booking.patient_full_name || "Unknown";
+                const phone = p.phone_number || "N/A";
+                const email = p.email || "N/A";
+                const reason = p.reason_to_visit || "No reason provided";
+                const status = getTabStatus(booking);
 
-        {showUpcoming && upcomingBookings.length > 0 && (
-          <TableSection bookings={upcomingBookings} handleReject={handleReject} />
-        )}
+                return (
+                  <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                    {/* Patient Column */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                          {fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{fullName}</p>
+                        </div>
+                      </div>
+                    </td>
 
-        {showUpcoming && upcomingBookings.length === 0 && (
-          <p className="px-5 py-3 text-gray-500">No upcoming appointments.</p>
-        )}
+                    {/* Phone Column */}
+                    <td className="px-4 py-3">
+                      <span className="text-gray-700 text-sm">{phone}</span>
+                    </td>
+
+                    {/* Email Column */}
+                    <td className="px-4 py-3">
+                      <span className="text-gray-700 text-sm">{email}</span>
+                    </td>
+
+                    {/* Reason Column */}
+                    <td className="px-4 py-3">
+                      <span className="text-gray-600 text-sm truncate max-w-[150px] block" title={reason}>
+                        {reason}
+                      </span>
+                    </td>
+
+                    {/* Date Column */}
+                    <td className="px-4 py-3">
+                      <span className="text-gray-700 text-sm">
+                        {new Date(booking.date).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "2-digit",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </td>
+
+                    {/* Time Column */}
+                    <td className="px-4 py-3">
+                      <span className="text-gray-700 text-sm">
+                        {booking.start_time} – {booking.end_time}
+                      </span>
+                    </td>
+
+                    {/* Status Badge */}
+                    <td className="px-4 py-3">
+                      {status === "Upcoming" && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                          Upcoming
+                        </span>
+                      )}
+                      {status === "Past" && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                          Completed
+                        </span>
+                      )}
+                      {status === "Cancelled" && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                          Cancelled
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Actions Column */}
+                    <td className="px-4 py-3">
+                      <div className="flex space-x-1.5">
+                        {status === "Upcoming" && (
+                          <>
+                            <button
+                              onClick={() => handleCancel(booking.id)}
+                              className="bg-gray-100 border border-gray-300 text-gray-700 px-2.5 py-1 rounded-md text-xs font-semibold hover:bg-gray-200 transition-colors"
+                              title="Cancel Appointment"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleReschedule(booking.id)}
+                              className="bg-blue-600 text-white px-2.5 py-1 rounded-md text-xs font-semibold hover:bg-blue-700 transition-colors"
+                              title="Reschedule Appointment"
+                            >
+                              Reschedule
+                            </button>
+                          </>
+                        )}
+                        {status === "Past" && (
+                          <button
+                            onClick={() => handleViewSummary(booking.id)}
+                            className="bg-gray-100 border border-gray-300 text-gray-700 px-2.5 py-1 rounded-md text-xs font-semibold hover:bg-gray-200 transition-colors"
+                            title="View Summary"
+                          >
+                            View Summary
+                          </button>
+                        )}
+                        {status === "Cancelled" && (
+                          <span className="text-gray-400 text-xs italic">Cancelled</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 };
 
 export default DoctorBookingsPage;
-
-interface TableSectionProps {
-  bookings: Booking[];
-  handleReject: (id: number) => void;
-}
-
-interface SortConfig {
-  key: "date" | null;
-  direction: "asc" | "desc";
-}
-
-const TableSection: React.FC<TableSectionProps> = ({ bookings, handleReject }) => {
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: null,
-    direction: "asc",
-  });
-
-  // ---- SORTING LOGIC FOR DATE ONLY ----
-  const sortedBookings = [...bookings].sort((a, b) => {
-    if (sortConfig.key !== "date") return 0;
-
-    const dateA = new Date(a.date);
-    const dateB = new Date(b.date);
-
-    if (dateA < dateB) return sortConfig.direction === "asc" ? -1 : 1;
-    if (dateA > dateB) return sortConfig.direction === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  const handleSort = () => {
-    setSortConfig((prev) => ({
-      key: "date",
-      direction: prev.direction === "asc" ? "desc" : "asc",
-    }));
-  };
-
-  const sortIcon = () =>
-    sortConfig.direction === "asc" ? "▲" : "▼";
-
-  return (
-    <div className="overflow-x-auto px-5 py-4">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="bg-gray-100 text-left">
-            <th className="p-3 border">Patient Name</th>
-            <th className="p-3 border">Phone</th>
-            <th className="p-3 border">Email</th>
-            <th className="p-3 border">DOB</th>
-            <th className="p-3 border">Reason</th>
-            <th className="p-3 border">Symptoms</th>
-
-            {/* SORTABLE DATE COLUMN */}
-            <th
-              className="p-3 border cursor-pointer"
-              onClick={handleSort}
-            >
-              Date {sortIcon()}
-            </th>
-
-            <th className="p-3 border">Time</th>
-            <th className="p-3 border">Status</th>
-            <th className="p-3 border">Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {sortedBookings.map((booking) => {
-            const p = booking.patient_info || {} as PatientInfo;
-
-            return (
-              <tr key={booking.id} className="hover:bg-gray-50">
-                <td className="p-3 border font-semibold">
-                  {p.full_name || booking.patient_full_name}
-                </td>
-
-                <td className="p-3 border">{p.phone_number || "N/A"}</td>
-                <td className="p-3 border">{p.email || "N/A"}</td>
-                <td className="p-3 border">{p.date_of_birth || "N/A"}</td>
-                <td className="p-3 border">{p.reason_to_visit || "N/A"}</td>
-                <td className="p-3 border">{p.symptoms_or_concerns || "N/A"}</td>
-
-                {/* SORTABLE DATE */}
-                <td className="p-3 border">{booking.date}</td>
-
-                <td className="p-3 border">
-                  {booking.start_time} – {booking.end_time}
-                </td>
-
-                <td className="p-3 border">
-                  {booking.is_rejected ? (
-                    <span className="text-red-600 font-semibold">Rejected</span>
-                  ) : (
-                    <span className="text-green-600 font-semibold">Accepted</span>
-                  )}
-                </td>
-
-                <td className="p-3 border">
-                  {!booking.is_rejected && (
-                    <button
-                      onClick={() => handleReject(booking.id)}
-                      className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
-                    >
-                      Reject
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
