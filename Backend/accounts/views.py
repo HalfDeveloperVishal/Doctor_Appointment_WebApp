@@ -49,8 +49,9 @@ class RegisterView(APIView):
         if serializer.is_valid():
 
             phone_number = request.data.get("phone_number")
+            if phone_number and not phone_number.startswith("+"):
+                phone_number = "+91" + phone_number
 
-            # Check if phone OTP is verified
             otp_verified = PhoneOTP.objects.filter(
                 phone_number=phone_number,
                 is_verified=True
@@ -318,9 +319,7 @@ class VerifyPhoneOTPView(APIView):
     def post(self, request):
         phone_number = request.data.get("phone_number")
         otp = request.data.get("otp")
-        user_id = request.data.get("user_id")
-        
-        # Prevent duplicate phone numbers
+
         if CustomUser.objects.filter(phone_number=phone_number).exists():
             return Response({"error": "Phone already in use"}, status=400)
 
@@ -338,14 +337,5 @@ class VerifyPhoneOTPView(APIView):
 
         otp_obj.is_verified = True
         otp_obj.save()
-
-        # update user
-        try:
-            user = CustomUser.objects.get(id=user_id)
-            user.phone_number = phone_number
-            user.is_phone_verified = True
-            user.save()
-        except CustomUser.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
 
         return Response({"message": "Phone verified successfully"})
