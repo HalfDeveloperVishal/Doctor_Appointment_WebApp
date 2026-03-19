@@ -7,3 +7,9 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
         return f"{user.pk}{timestamp}{user.is_verified}"
 
 email_verification_token = EmailVerificationTokenGenerator()
+
+# utils.py
+def normalize_phone(phone):
+    if not phone.startswith("+"):
+        phone = "+91" + phone
+    return phone
