@@ -118,6 +118,8 @@ const SignUpForm: React.FC = () => {
     try {
       const { agreeTerms, agreeMarketing, ...postData } = formData;
 
+      postData.phone_number = `+91${formData.phone_number}`;
+
       const res = await axios.post(
         "http://localhost:8000/accounts/register/",
         postData,

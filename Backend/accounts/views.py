@@ -10,13 +10,15 @@ from doctor.models import DoctorProfile
 from rest_framework.permissions import AllowAny
 from .models import CustomUser
 from google.oauth2 import id_token
-from google.auth.transport import requests
+from google.auth.transport.requests import Request
+from twilio.rest import Client
+import requests
 from dotenv import load_dotenv
 import os
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-from .utils import email_verification_token
+from .utils import email_verification_token, normalize_phone
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from django.utils import timezone
@@ -48,9 +50,8 @@ class RegisterView(APIView):
 
         if serializer.is_valid():
 
-            phone_number = request.data.get("phone_number")
+            phone_number = normalize_phone(request.data.get("phone_number"))
 
-            # Check if phone OTP is verified
             otp_verified = PhoneOTP.objects.filter(
                 phone_number=phone_number,
                 is_verified=True
@@ -131,9 +132,15 @@ class SignupGoogleAuthView(APIView):
         try:
             # Use env variable directly
             GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+            
+            if not GOOGLE_CLIENT_ID:
+                return Response(
+                    {"error": "Google Client ID not configured"},
+                    status=500
+                )
 
             idinfo = id_token.verify_oauth2_token(
-                token, requests.Request(), GOOGLE_CLIENT_ID
+                token, Request(), GOOGLE_CLIENT_ID
             )
 
             email = idinfo["email"]
@@ -189,7 +196,7 @@ class LoginGoogleAuthView(APIView):
             GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 
             idinfo = id_token.verify_oauth2_token(
-                token, requests.Request(), GOOGLE_CLIENT_ID
+                token, Request(), GOOGLE_CLIENT_ID
             )
 
             email = idinfo["email"]
@@ -292,60 +299,148 @@ class ResetPasswordView(APIView):
 
         return Response({"message": "Password reset successful!"})
 
-class SendPhoneOTPView(APIView):
+# class SendPhoneOTPView(APIView): in these we genrated otp and it gets sended to number by the twilio
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         phone_number = normalize_phone(request.data.get("phone_number"))
+
+#         if not phone_number:
+#             return Response({"error": "Phone number is required"}, status=400)
+
+#         otp = str(random.randint(100000, 999999))
+
+#         # ✅ DELETE old OTPs (important)
+#         PhoneOTP.objects.filter(phone_number=phone_number).delete()
+
+#         # Save new OTP
+#         PhoneOTP.objects.create(
+#             phone_number=phone_number,
+#             otp=otp
+#         )
+
+#         try:
+#             client = Client(
+#                 os.environ.get("TWILIO_ACCOUNT_SID"),
+#                 os.environ.get("TWILIO_AUTH_TOKEN")
+#             )
+
+#             client.messages.create(
+#                 body=f"Your OTP is {otp}",
+#                 from_=os.environ.get("TWILIO_PHONE_NUMBER"),
+#                 to=phone_number
+#             )
+
+#             return Response({"message": "OTP sent successfully"})
+
+#         except Exception as e:
+#             print("Twilio Error:", str(e))
+#             return Response({"error": "Failed to send OTP"}, status=500)
+
+class SendPhoneOTPView(APIView): # in these we use twilio which send the otp on it own
     permission_classes = [AllowAny]
 
     def post(self, request):
-        phone_number = request.data.get("phone_number")
+        phone_number = normalize_phone(request.data.get("phone_number"))
 
         if not phone_number:
             return Response({"error": "Phone number is required"}, status=400)
+        try:
+            client = Client(
+                os.environ.get("TWILIO_ACCOUNT_SID"),
+                os.environ.get("TWILIO_AUTH_TOKEN")
+            )
 
-        otp = str(random.randint(100000, 999999))
+            verification = client.verify.services(
+                
+                os.environ.get("TWILIO_VERIFY_SERVICE_SID")
+            ).verifications.create(
+                to=phone_number,
+                channel="sms"
+            )
 
-        PhoneOTP.objects.create(
-            phone_number=phone_number,
-            otp=otp
-        )
+            return Response({"message": "OTP sent successfully"})
 
-        print("OTP:", otp)
+        except Exception as e:
+            print("Twilio Verify Error:", str(e))
+            return Response({"error": "Failed to send OTP"}, status=500)
 
-        return Response({"message": "OTP sent successfully"})
     
-class VerifyPhoneOTPView(APIView):
+# class VerifyPhoneOTPView(APIView): in these we verify the otp which is gnerated and saved in db 
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         phone_number = normalize_phone(request.data.get("phone_number"))
+#         otp = request.data.get("otp")
+#         user_id = request.data.get("user_id")   # ✅ add this
+
+#         otp_obj = PhoneOTP.objects.filter(
+#             phone_number=phone_number,
+#             otp=otp
+#         ).first()
+
+#         if not otp_obj:
+#             return Response({"error": "Invalid OTP"}, status=400)
+
+#         # Expiry check
+#         if timezone.now() > otp_obj.created_at + timedelta(minutes=5):
+#             otp_obj.delete()
+#             return Response({"error": "OTP expired"}, status=400)
+
+#         otp_obj.is_verified = True
+#         otp_obj.save()
+
+#         # ✅ IMPORTANT FIX
+#         if user_id:
+#             try:
+#                 user = CustomUser.objects.get(id=user_id)
+#                 user.phone_number = phone_number   # ✅ save phone
+#                 user.is_phone_verified = True
+#                 user.save()
+#             except CustomUser.DoesNotExist:
+#                 return Response({"error": "User not found"}, status=404)
+
+#         return Response({"message": "Phone verified successfully"})
+
+class VerifyPhoneOTPView(APIView): #in this we use twilio nly for verifying otp
     permission_classes = [AllowAny]
 
     def post(self, request):
-        phone_number = request.data.get("phone_number")
+        phone_number = normalize_phone(request.data.get("phone_number"))
         otp = request.data.get("otp")
         user_id = request.data.get("user_id")
-        
-        # Prevent duplicate phone numbers
-        if CustomUser.objects.filter(phone_number=phone_number).exists():
-            return Response({"error": "Phone already in use"}, status=400)
 
-        otp_obj = PhoneOTP.objects.filter(
-            phone_number=phone_number,
-            otp=otp,
-            is_verified=False
-        ).order_by("-created_at").first()
+        if not phone_number or not otp:
+            return Response({"error": "Phone number and OTP required"}, status=400)
 
-        if not otp_obj:
-            return Response({"error": "Invalid OTP"}, status=400)
-
-        if timezone.now() > otp_obj.created_at + timedelta(minutes=5):
-            return Response({"error": "OTP expired"}, status=400)
-
-        otp_obj.is_verified = True
-        otp_obj.save()
-
-        # update user
         try:
-            user = CustomUser.objects.get(id=user_id)
-            user.phone_number = phone_number
-            user.is_phone_verified = True
-            user.save()
-        except CustomUser.DoesNotExist:
-            return Response({"error": "User not found"}, status=404)
+            client = Client(
+                os.environ.get("TWILIO_ACCOUNT_SID"),
+                os.environ.get("TWILIO_AUTH_TOKEN")
+            )
 
-        return Response({"message": "Phone verified successfully"})
+            verification_check = client.verify.services(
+                os.environ.get("TWILIO_VERIFY_SERVICE_SID")
+            ).verification_checks.create(
+                to=phone_number,
+                code=otp
+            )
+
+            if verification_check.status != "approved":
+                return Response({"error": "Invalid OTP"}, status=400)
+
+            # ✅ Mark user verified
+            if user_id:
+                try:
+                    user = CustomUser.objects.get(id=user_id)
+                    user.phone_number = phone_number
+                    user.is_phone_verified = True
+                    user.save()
+                except CustomUser.DoesNotExist:
+                    return Response({"error": "User not found"}, status=404)
+
+            return Response({"message": "Phone verified successfully"})
+
+        except Exception as e:
+            print("Twilio Verify Error:", str(e))
+            return Response({"error": "Verification failed"}, status=500)
