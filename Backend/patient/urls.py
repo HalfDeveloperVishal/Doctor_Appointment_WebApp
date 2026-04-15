@@ -1,5 +1,5 @@
 from django.urls import path
-from .views.patient_views import DoctorAvailableSlotsView,DoctorListView,BookSlotView,PatientAppointmentsView,RejectBookingView
+from .views.patient_views import DoctorAvailableSlotsView,DoctorListView,BookSlotView,PatientAppointmentsView,RejectBookingView,CancelAppointmentView,RescheduleAppointmentView
 from .views.chatbot_view import MedicalChatView
 from .views.payment_views import CreatePaymentOrderView,VerifyPaymentView
 
@@ -12,4 +12,6 @@ urlpatterns = [
     path('chatbot/', MedicalChatView.as_view(), name='chatbot'),
     path("create_payment_order/", CreatePaymentOrderView.as_view(), name="create_payment_order"),
     path("verify_payment/", VerifyPaymentView.as_view(), name="verify_payment"),
+    path("cancel-appointment/<int:pk>/", CancelAppointmentView.as_view()),
+    path('reschedule-appointment/<int:pk>/', RescheduleAppointmentView.as_view()),
 ]

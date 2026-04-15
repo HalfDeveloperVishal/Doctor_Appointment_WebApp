@@ -159,3 +159,4 @@ class DoctorPublicDetailView(APIView):
 
         serializer = DoctorProfileSerializer(doctor, context={'request': request})
         return Response(serializer.data, status=200)
+

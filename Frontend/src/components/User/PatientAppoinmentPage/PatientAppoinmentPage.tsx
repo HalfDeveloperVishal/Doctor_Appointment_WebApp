@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Navbar from "../HomePage/Navbar";
 import Chatbot from "../../Chatbot/Chatbot";
+import { useNavigate } from "react-router-dom";
+import day from "node_modules/react-datepicker/dist/day";
 
-// ============================================
-// INTERFACES
-// ============================================
+// ================= TYPES =================
 interface PatientInfo {
   full_name?: string;
   reason_to_visit?: string;
@@ -27,31 +27,56 @@ interface Appointment {
   patient_info?: PatientInfo;
 }
 
-type SortKey = "date" | "patient_name" | "created_at";
-
-interface SortConfig {
-  key: SortKey | null;
-  direction: "asc" | "desc";
-}
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
+// ================= MAIN COMPONENT =================
 const PatientAppointmentsPage = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
-  const [searchTerm, setSearchTerm] = useState<string>("");
+  const navigate = useNavigate(); // ✅ fixed name
 
-  const [showToday, setShowToday] = useState<boolean>(true);
-  const [showUpcoming, setShowUpcoming] = useState<boolean>(false);
+  const handleReschedule = async (
+    id: number,
+    newDate: string,
+    newStart: string,
+    newEnd: string
+  ) => {
+    try {
+      await axios.post(
+        `http://localhost:8000/patient/reschedule-appointment/${id}/`,
+        {
+          date: newDate,
+          start_time: newStart,
+          end_time: newEnd,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
 
-  const todayStr = new Date().toISOString().split("T")[0];
+      setAppointments((prev) =>
+        prev.map((a) =>
+          a.id === id
+            ? { ...a, date: newDate, start_time: newStart, end_time: newEnd }
+            : a
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Reschedule failed");
+    }
+  };
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<
+    "upcoming" | "past" | "cancelled"
+  >("upcoming");
+
+  // ================= FETCH =================
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const res = await axios.get<Appointment[]>(
+        const res = await axios.get(
           "http://localhost:8000/patient/patient-appointment/",
           {
             headers: {
@@ -71,86 +96,130 @@ const PatientAppointmentsPage = () => {
     fetchAppointments();
   }, []);
 
-  // ---- SEARCH FILTER ----
-  const filteredAppointments = appointments.filter((a) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      a.doctor_name?.toLowerCase().includes(search) ||
-      a.specialization?.toLowerCase().includes(search) ||
-      a.clinic_name?.toLowerCase().includes(search) ||
-      a.address?.toLowerCase().includes(search)
+  // ================= CANCEL LOGIC =================
+  const handleCancel = async (id: number) => {
+    const confirmCancel = window.confirm(
+      "Are you sure you want to cancel?"
     );
-  });
+    if (!confirmCancel) return;
 
-  // ---- CATEGORIZE ----
-  const todaysAppointments = filteredAppointments.filter(
-    (a) => new Date(a.date).toISOString().split("T")[0] === todayStr
+    try {
+      await axios.post(
+        `http://localhost:8000/patient/cancel-appointment/${id}/`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
+
+      // update UI instantly
+      setAppointments((prev) =>
+        prev.map((a) =>
+          a.id === id ? { ...a, is_rejected: true } : a
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Cancel failed");
+    }
+  };
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // ================= FILTER =================
+  const upcoming = appointments.filter(
+    (a) => a.date >= today && !a.is_rejected
   );
 
-  const upcomingAppointments = filteredAppointments.filter(
-    (a) => new Date(a.date).toISOString().split("T")[0] > todayStr
+  const past = appointments.filter(
+    (a) => a.date < today && !a.is_rejected
   );
 
-  if (loading) return <p className="p-4">Loading...</p>;
-  if (error) return <p className="p-4 text-red-500">{error}</p>;
+  const cancelled = appointments.filter((a) => a.is_rejected);
+
+  const getData = () => {
+    if (activeTab === "upcoming") return upcoming;
+    if (activeTab === "past") return past;
+    return cancelled;
+  };
+
+  if (loading) return <p className="p-5">Loading...</p>;
+  if (error) return <p className="p-5 text-red-500">{error}</p>;
 
   return (
     <>
       <Navbar />
 
-      <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
-        {/* Search Box */}
-        <div className="mb-6 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
-          <input
-            type="text"
-            placeholder="Search by doctor, specialization, clinic, or address..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full focus:outline-none text-gray-700 placeholder-gray-400"
-          />
+      <div className="mt-20 max-w-5xl mx-auto p-6 bg-gray-50 min-h-screen">
+
+        {/* HEADER */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">My Appointments</h1>
+            <p className="text-gray-500 text-sm">
+              View and manage all your appointments.
+            </p>
+          </div>
+
+          {/* BOOK BUTTON */}
+          <button
+            onClick={() => navigate("/find-doctor")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg shadow-sm transition"
+          >
+            <span className="text-lg font-bold">+</span>
+            Book New Appointment
+          </button>
         </div>
 
-        {/* ---------------- TODAY'S APPOINTMENTS ---------------- */}
-        <div className="mb-6 bg-white rounded-lg border shadow-sm">
-          <button
-            onClick={() => setShowToday(!showToday)}
-            className="w-full flex justify-between px-5 py-3 text-lg font-semibold bg-gray-100 hover:bg-gray-200"
-          >
-            <span>Today's Appointments ({todaysAppointments.length})</span>
-            <span>{showToday ? "▲" : "▼"}</span>
-          </button>
-
-          {showToday && (
-            <TableSection appointments={todaysAppointments} />
-          )}
-
-          {showToday && todaysAppointments.length === 0 && (
-            <p className="px-5 py-3 text-gray-500">No appointments today.</p>
-          )}
+        {/* TABS */}
+        <div className="flex bg-gray-200 rounded-lg p-1 mb-6">
+          {["upcoming", "past", "cancelled"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`flex-1 py-2 rounded-md text-sm font-medium ${activeTab === tab
+                ? "bg-white shadow text-blue-600"
+                : "text-gray-600"
+                }`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
         </div>
 
-        {/* ---------------- UPCOMING APPOINTMENTS ---------------- */}
-        <div className="mb-6 bg-white rounded-lg border shadow-sm">
-          <button
-            onClick={() => setShowUpcoming(!showUpcoming)}
-            className="w-full flex justify-between px-5 py-3 text-lg font-semibold bg-gray-100 hover:bg-gray-200"
-          >
-            <span>Upcoming Appointments ({upcomingAppointments.length})</span>
-            <span>{showUpcoming ? "▲" : "▼"}</span>
-          </button>
+        {/* LIST */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {getData().length === 0 ? (
+            <p className="p-5 text-gray-500">No appointments found.</p>
+          ) : (
+            <>
+              {/* HEADER ROW */}
+              <div className="grid grid-cols-[2.2fr_1.2fr_1.5fr_1fr_1.5fr] bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-700 border-b">
+                <div>DOCTOR</div>
+                <div>DATE</div>
+                <div>TIME</div>
+                <div>STATUS</div>
+                <div className="text-right">ACTIONS</div>
+              </div>
 
-          {showUpcoming && (
-            <TableSection appointments={upcomingAppointments} />
-          )}
-
-          {showUpcoming && upcomingAppointments.length === 0 && (
-            <p className="px-5 py-3 text-gray-500">No upcoming appointments.</p>
+              {/* APPOINTMENT ROWS */}
+              {getData().map((a) => (
+                <AppointmentCard
+                  key={a.id}
+                  a={a}
+                  onCancel={handleCancel}
+                  onReschedule={handleReschedule}
+                />
+              ))}
+            </>
           )}
         </div>
       </div>
 
-      {/* Chatbot */}
-      <div className="fixed bottom-5 right-5 z-50">
+      {/* CHATBOT */}
+      <div className="fixed bottom-5 right-5">
         <Chatbot />
       </div>
     </>
@@ -159,179 +228,159 @@ const PatientAppointmentsPage = () => {
 
 export default PatientAppointmentsPage;
 
-// ============================================
-// TABLE SECTION COMPONENT
-// ============================================
-interface TableSectionProps {
-  appointments: Appointment[];
-}
+// ================= CARD COMPONENT =================
+const AppointmentCard = ({
+  a,
+  onCancel,
+  onReschedule,
+}: {
+  a: Appointment;
+  onCancel: (id: number) => void;
+  onReschedule: (
+    id: number,
+    date: string,
+    start: string,
+    end: string
+  ) => void;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [newDate, setNewDate] = useState(a.date);
+  const [newStart, setNewStart] = useState(a.start_time);
+  const [newEnd, setNewEnd] = useState(a.end_time);
 
-const TableSection = ({ appointments }: TableSectionProps) => {
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: null,
-    direction: "asc",
-  });
+  const isPast = new Date(a.date) < new Date();
+  const isCancelled = a.is_rejected;
 
-  if (!appointments.length) return null;
-
-  // ---------- SORTING LOGIC ----------
-  const sortedAppointments = [...appointments].sort((a, b) => {
-    if (!sortConfig.key) return 0;
-    const key = sortConfig.key;
-
-    let valA: string | Date;
-    let valB: string | Date;
-
-    if (key === "patient_name") {
-      valA = a.patient_info?.full_name || "";
-      valB = b.patient_info?.full_name || "";
-    } else {
-      valA = a[key];
-      valB = b[key];
-    }
-
-    // convert date fields
-    if (key === "date" || key === "created_at") {
-      valA = new Date(valA);
-      valB = new Date(valB);
-    }
-
-    if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  // Handle click on sortable column
-  const handleSort = (key: SortKey): void => {
-    setSortConfig((prev) => ({
-      key,
-      direction:
-        prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
+  const getStatus = () => {
+    if (isCancelled) return "Cancelled";
+    if (isPast) return "Completed";
+    return "Upcoming";
   };
 
-  // Sorting icon helper
-  const sortIcon = (key: SortKey): string => {
-    if (sortConfig.key !== key) return "↕";
-    return sortConfig.direction === "asc" ? "▲" : "▼";
-  };
-
-  // ---------- STATUS BADGE ----------
-  const getStatusBadge = (isRejected: boolean): string => {
-    const base = "px-3 py-1 text-xs font-semibold rounded-full";
-    return isRejected
-      ? base + " bg-red-100 text-red-700"
-      : base + " bg-green-100 text-green-700";
-  };
-
-  const getStatusText = (appointment: Appointment): string =>
-    appointment.is_rejected ? "Rejected" : "Accepted";
-
-  // ---------- PAYMENT METHOD BADGE ----------
-  const getPaymentMethodBadge = (paymentMethod: string): string => {
-    const base = "px-3 py-1 text-xs font-semibold rounded-full";
-    return paymentMethod === "online"
-      ? base + " bg-blue-100 text-blue-700"
-      : base + " bg-purple-100 text-purple-700";
-  };
-
-  const getPaymentMethodText = (method: string): string => {
-    return method === "online" ? "Paid Online" : "Pay at Counter";
-  };
-
-  const formatDateTime = (dateTimeString: string | null | undefined): string => {
-    if (!dateTimeString) return "N/A";
-
-    const dateObj = new Date(dateTimeString);
-
-    const date = dateObj.toISOString().split("T")[0];
-    const time = dateObj.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    return `${date} (${time})`;
+  const getStatusStyle = () => {
+    if (isCancelled) return "bg-red-100 text-red-600";
+    if (isPast) return "bg-green-100 text-green-600";
+    return "bg-blue-100 text-blue-600";
   };
 
   return (
-    <div className="overflow-x-auto px-5 py-4">
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="bg-gray-100 text-left">
-            <th className="border p-3">Doctor</th>
-            <th className="border p-3">Specialization</th>
-            <th className="border p-3">Clinic</th>
-            <th className="border p-3">Address</th>
+    <div className="grid grid-cols-[2.2fr_1.2fr_1.5fr_1fr_1.5fr] items-center px-6 py-4 border-b hover:bg-gray-50">
 
-            {/* SORTABLE DATE COLUMN */}
-            <th
-              className="border p-3 cursor-pointer"
-              onClick={() => handleSort("date")}
+      {/* DOCTOR */}
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+          👨‍⚕️
+        </div>
+        <div>
+          <p className="font-semibold whitespace-nowrap">Dr. {a.doctor_name}</p>
+          <p className="text-sm text-gray-500">{a.specialization}</p>
+        </div>
+      </div>
+
+      {/* DATE */}
+      <div className="text-sm text-gray-600">
+        {isEditing ? (
+          <input
+            type="date"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
+            className="border px-2 py-1 rounded"
+          />
+        ) : (
+          new Date(a.date).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })
+        )}
+      </div>
+
+      {/* TIME */}
+      <div className="text-sm text-gray-600 whitespace-nowrap">
+        {isEditing ? (
+          <div className="flex gap-2">
+            <input
+              type="time"
+              value={newStart}
+              onChange={(e) => setNewStart(e.target.value)}
+              className="border px-2 py-1 rounded"
+            />
+            <input
+              type="time"
+              value={newEnd}
+              onChange={(e) => setNewEnd(e.target.value)}
+              className="border px-2 py-1 rounded"
+            />
+          </div>
+        ) : (
+          `${new Date(
+            `1970-01-01T${a.start_time}`
+          ).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })} - ${new Date(
+            `1970-01-01T${a.end_time}`
+          ).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })}`
+        )}
+      </div>
+
+      {/* STATUS */}
+      <div className="flex justify-center">
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyle()}`}
+        >
+          {getStatus()}
+        </span>
+      </div>
+
+      {/* ACTIONS */}
+      <div className="flex justify-end gap-2 items-center min-w-[220px]">
+        {!isEditing ? (
+          <>
+            {!isCancelled && !isPast && (
+              <>
+                <button
+                  onClick={() => onCancel(a.id)}
+                  className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Reschedule
+                </button>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => {
+                onReschedule(a.id, newDate, newStart, newEnd);
+                setIsEditing(false);
+              }}
+              className="px-3 py-1 bg-green-600 text-white rounded"
             >
-              Date {sortIcon("date")}
-            </th>
+              Save
+            </button>
 
-            <th className="border p-3">Slot</th>
-
-            {/* SORTABLE PATIENT NAME */}
-            <th
-              className="border p-3 cursor-pointer"
-              onClick={() => handleSort("patient_name")}
+            <button
+              onClick={() => setIsEditing(false)}
+              className="px-3 py-1 bg-gray-400 text-white rounded"
             >
-              Patient Name {sortIcon("patient_name")}
-            </th>
-
-            <th className="border p-3">Reason</th>
-            <th className="border p-3">Symptoms</th>
-
-            {/* SORTABLE BOOKED ON */}
-            <th
-              className="border p-3 cursor-pointer"
-              onClick={() => handleSort("created_at")}
-            >
-              Booked On {sortIcon("created_at")}
-            </th>
-
-            <th className="border p-3">Payment Method</th>
-            <th className="border p-3">Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {sortedAppointments.map((a) => {
-            const info = a.patient_info || {};
-
-            return (
-              <tr key={a.id} className="hover:bg-gray-50">
-                <td className="border p-3 font-semibold">Dr. {a.doctor_name}</td>
-                <td className="border p-3">{a.specialization}</td>
-                <td className="border p-3">{a.clinic_name}</td>
-                <td className="border p-3">{a.address}</td>
-                <td className="border p-3">{a.date}</td>
-                <td className="border p-3">
-                  {a.start_time} – {a.end_time}
-                </td>
-                <td className="border p-3">{info.full_name || "N/A"}</td>
-                <td className="border p-3">{info.reason_to_visit || "N/A"}</td>
-                <td className="border p-3">{info.symptoms_or_concerns || "N/A"}</td>
-                <td className="border p-3">{formatDateTime(a.created_at)}</td>
-
-                <td className="border p-3">
-                  <span className={getPaymentMethodBadge(a.payment_method)}>
-                    {getPaymentMethodText(a.payment_method)}
-                  </span>
-                </td>
-
-                <td className="border p-3">
-                  <span className={getStatusBadge(a.is_rejected)}>
-                    {getStatusText(a)}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              Cancel
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 };
