@@ -210,3 +210,55 @@ class RejectBookingView(APIView):
         except Booking.DoesNotExist:
             return Response({"error": "Booking not found"}, status=404)
         
+class CancelAppointmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(
+                id=pk,
+                patient=request.user  # only owner can cancel
+            )
+
+            booking.is_rejected = True
+            booking.save()
+
+            return Response({
+                "message": "Appointment cancelled successfully"
+            })
+
+        except Booking.DoesNotExist:
+            return Response(
+                {"error": "Booking not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )        
+        
+class RescheduleAppointmentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(
+                id=pk,
+                patient=request.user
+            )
+
+            date = request.data.get("date")
+            start_time = request.data.get("start_time")
+            end_time = request.data.get("end_time")
+
+            if not date or not start_time or not end_time:
+                return Response({"error": "Missing fields"}, status=400)
+
+            booking.date = date
+            booking.start_time = start_time
+            booking.end_time = end_time
+            booking.save()
+
+            return Response({"message": "Rescheduled successfully"})
+
+        except Booking.DoesNotExist:
+            return Response(
+                {"error": "Booking not found"},
+                status=404
+            )        

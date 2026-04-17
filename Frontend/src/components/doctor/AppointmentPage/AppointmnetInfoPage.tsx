@@ -97,9 +97,9 @@ const DoctorBookingsPage: React.FC = () => {
   const handleCancel = (id: number) => {
     handleReject(id); // Reusing reject logic for Cancel
   };
-  const handleReschedule = (id: number) => {
-    alert(`Reschedule appointment ${id} - Implement logic`);
-  };
+  // const handleReschedule = (id: number) => {
+  //   alert(`Reschedule appointment ${id} - Implement logic`);
+  // };
   const handleViewSummary = (id: number) => {
     alert(`View summary for appointment ${id} - Implement logic`);
   };
@@ -270,13 +270,13 @@ const DoctorBookingsPage: React.FC = () => {
                             >
                               Cancel
                             </button>
-                            <button
+                            {/* <button
                               onClick={() => handleReschedule(booking.id)}
                               className="bg-blue-600 text-white px-2.5 py-1 rounded-md text-xs font-semibold hover:bg-blue-700 transition-colors"
                               title="Reschedule Appointment"
                             >
                               Reschedule
-                            </button>
+                            </button> */}
                           </>
                         )}
                         {status === "Past" && (

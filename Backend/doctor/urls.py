@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from .views import DoctorProfileCreateView,DoctorProfileCheckView, DoctorProfileView,BookingInfoView,AppointmentStatsView,DoctorPublicDetailView
 
 urlpatterns = [
@@ -8,5 +8,4 @@ urlpatterns = [
     path('booking-info/', BookingInfoView.as_view(), name='booking-info'),
     path('appointment-stats/', AppointmentStatsView.as_view(), name='appointment-stats'),
     path('<int:id>/details/', DoctorPublicDetailView.as_view(), name='doctor-details'),
-    
 ]
