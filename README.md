@@ -89,3 +89,11 @@ Make sure both servers are running simultaneously:
 - If you encounter permission errors when deleting `.venv`, make sure the virtual environment is deactivated first
 - If `pip install` fails, try upgrading pip: `pip install --upgrade pip`
 - If port 8000 or 3000/5173 is already in use, you can specify a different port
+- For any other issues, refer to the error messages in the terminal for guidance
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## Contributing
+Contributions are welcome! Please fork the repository and create a pull request with your changes. For major changes, please open an issue first to discuss what you would like to change.
+## Contact
+For any questions or feedback, please contact us at [
+    
